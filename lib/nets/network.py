@@ -318,6 +318,44 @@ class Network(object):
 
         return loss
 
+    def _add_rpn_losses(self, sigma_rpn=3.0):
+        with tf.variable_scope('LOSS_' + self._tag) as scope:
+            # RPN, class loss
+            rpn_cls_score = tf.reshape(
+                self._predictions['rpn_cls_score_reshape'], [-1, 2])
+            rpn_label = tf.reshape(self._anchor_targets['rpn_labels'], [-1])
+            rpn_select = tf.where(tf.not_equal(rpn_label, -1))
+            rpn_cls_score = tf.reshape(
+                tf.gather(rpn_cls_score, rpn_select), [-1, 2])
+            rpn_label = tf.reshape(tf.gather(rpn_label, rpn_select), [-1])
+            rpn_cross_entropy = tf.reduce_mean(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_label))
+
+            # RPN, bbox loss
+            rpn_bbox_pred = self._predictions['rpn_bbox_pred']
+            rpn_bbox_targets = self._anchor_targets['rpn_bbox_targets']
+            rpn_bbox_inside_weights = self._anchor_targets['rpn_bbox_inside_weights']
+            rpn_bbox_outside_weights = self._anchor_targets['rpn_bbox_outside_weights']
+            rpn_loss_box = self._smooth_l1_loss(rpn_bbox_pred, 
+                                                rpn_bbox_targets, 
+                                                rpn_bbox_inside_weights,
+                                                rpn_bbox_outside_weights, 
+                                                sigma=sigma_rpn, 
+                                                dim=[1, 2, 3])
+
+        self._losses['rpn_cross_entropy'] = rpn_cross_entropy
+        self._losses['rpn_loss_box'] = rpn_loss_box
+
+        loss = rpn_cross_entropy + rpn_loss_box
+        regularization_loss = tf.add_n(
+            tf.losses.get_regularization_losses(), 'regu')
+        self._losses['total_loss'] = loss + regularization_loss
+
+        self._event_summaries.update(self._losses)
+
+    return loss
+
+
     def _region_proposal(self, net_conv, is_training, initializer):
         rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], 
                           trainable=is_training,
@@ -398,7 +436,19 @@ class Network(object):
     # <Modify>
     def create_architecture(self, mode, num_classes, tag=None,
                             anchor_scales=(8, 16, 32), anchor_ratios=(0.5, 1, 2)):
-        self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3])
+        """
+        Create main architecture
+
+        Params
+        ---
+        `mode`: TRAIN or TEST
+        `num_classes`: number of classification classes
+        `tag`: default is 'default', tag used in tf-scope
+        """
+        if cfg.MED_IMG:
+            self._image = tf.placeholder(tf.float32, shape=[1, None, None, 1])
+        else:
+            self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3])
         self._im_info = tf.placeholder(tf.float32, shape=[3])   
         self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
         self._tag = tag

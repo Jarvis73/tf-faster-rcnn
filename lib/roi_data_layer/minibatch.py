@@ -28,7 +28,11 @@ def get_minibatch(roidb, num_classes):
         format(num_images, cfg.TRAIN.BATCH_SIZE)
 
     # Get the input image blob, formatted for caffe
-    im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
+    if not cfg.MED_IMG:
+        im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
+    else:
+        im_blob = _get_medical_image_blob(roidb)
+        im_scales = [1] # compatible with original version
 
     blobs = {'data': im_blob}
 
@@ -62,13 +66,7 @@ def _get_image_blob(roidb, scale_inds):
     processed_ims = []
     im_scales = []
     for i in range(num_images):
-        if cfg.MED_IMG: # identify medical image
-            with open(roidb[i]['image'], 'rb') as fid:
-                raw_data = fid.read()
-            im = np.frombuffer(raw_data, dtype=METType[cfg.MET_TYPE])
-            im = np.reshape(im, (roidb[i]['height'], roidb[i]['width']))
-        else:   # default is natural image
-            im = cv2.imread(roidb[i]['image'])
+        im = cv2.imread(roidb[i]['image'])
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]
@@ -81,3 +79,25 @@ def _get_image_blob(roidb, scale_inds):
     blob = im_list_to_blob(processed_ims)
 
     return blob, im_scales
+
+def _get_medical_image_blob(roidb):
+    """ Builds an input blob from the medical image in the roidb
+    """
+    num_images = len(roidb)
+    processed_ims = []
+    for i in range(num_images):
+        with open(roidb[i]['image'], 'rb') as fid:
+            raw_data = fid.read()
+        im = np.frombuffer(raw_data, dtype=METType[cfg.MET_TYPE])
+        im = np.reshape(im, (roidb[i]['height'], roidb[i]['width']))
+        if roidb[i]['flipped']:
+            im = im[:, ::-1]
+        processed_ims.append(im)
+    
+    num_images = len(processed_ims)
+    blob = np.zeros((num_images, cfg.TRAIN.MAX_SIZE, cfg.TRAIN.MAX_SIZE, 1),
+                    dtype=np.float32)
+    for i in range(num_images):
+        blob[i,...] = processed_ims[i]
+
+    return blob
