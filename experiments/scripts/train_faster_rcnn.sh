@@ -9,7 +9,7 @@ export PYTHONUNBUFFERED="True"
 GPU_ID=$1
 DATASET=$2
 NET=$3
-# MED_IMG_FLAG True
+# MED_IMG True
 array=( $@ )                          # 参数列表
 len=${#array[@]}                      # 获取数组长度
 EXTRA_ARGS=${array[@]:3:$len}         # 其他参数列表
