@@ -13,14 +13,32 @@ from model.bbox_transform import bbox_transform_inv, clip_boxes
 from model.nms_wrapper import nms
 
 
-def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors):
-    """A simplified version compared to fast/er RCNN
-       For details please see the technical report
+def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors, only_rpn=False):
+    """
+    A simplified version compared to fast/er RCNN. For details please see the technical report
+    
+    Params
+    ---
+    `rpn_cls_prob`: class scores of all the anchors, the shape is [bs, h, w, 2*9]  
+    `rpn_bbox_pred`: bbox parameters of all the anchors, the shape is [bs, h, w, 4*9]  
+    `im_info`: a tensor array with three number, [image height, image width, image resize ratio
+    for medical images, image resize ratio equals to 1.0 always, because they are the same 
+    size 512 x 512  
+    `cfg_key`: mode, TRAIN or TEST  
+    `_feat_stride`: stride from the input images to feature maps in head, for example it equals 
+    to 16 for VGG16  
+    `anchors`: all the anchors computed in `anchor_component()`  
+    `num_anchors`: number of anchors at single point  
+
+    Returns
+    ---
+
     """
     if type(cfg_key) == bytes:
         cfg_key = cfg_key.decode('utf-8')
-    pre_nms_topN = cfg[cfg_key].RPN_PRE_NMS_TOP_N       # 12000
-    post_nms_topN = cfg[cfg_key].RPN_POST_NMS_TOP_N     # 2000
+    if only_rpn:
+        pre_nms_topN = cfg[cfg_key].RPN_PRE_NMS_TOP_N       # 12000 for train, 6000 for test
+        post_nms_topN = cfg[cfg_key].RPN_POST_NMS_TOP_N     # 2000  for train, 300  for test
     nms_thresh = cfg[cfg_key].RPN_NMS_THRESH            # 0.7
 
     # Get the scores and bounding boxes

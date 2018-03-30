@@ -119,19 +119,21 @@ __C.TRAIN.RPN_NMS_THRESH = 0.7
 # IOU < thresh: negative example
 __C.TRAIN.RPN_NEGATIVE_OVERLAP = 0.3
 
-# IOU >= thresh: positive example
-__C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
-
-# Number of top scoring boxes to keep before apply NMS to RPN proposals
-__C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
-
-# Number of top scoring boxes to keep after applying NMS to RPN proposals
-__C.TRAIN.RPN_POST_NMS_TOP_N = 2000
-
 # Give the positive RPN examples weight of p * 1 / {num positives}
 # and give negatives a weight of (1 - p)
 # Set to -1.0 to use uniform example weighting
 __C.TRAIN.RPN_POSITIVE_WEIGHT = -1.0
+
+# IOU >= thresh: positive example
+__C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
+
+# Number of top scoring boxes to keep after applying NMS to RPN proposals
+__C.TRAIN.RPN_POST_NMS_TOP_N = 2000
+__C.TRAIN.RPN_POST_NMS_TOP_N_ONLY_RPN = 128
+
+# Number of top scoring boxes to keep before apply NMS to RPN proposals
+__C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
+__C.TRAIN.RPN_PRE_NMS_TOP_N_ONLY_RPN = 5000
 
 # Scale to use during training (can list multiple scales)
 # The scale is the pixel size of an image's shortest side

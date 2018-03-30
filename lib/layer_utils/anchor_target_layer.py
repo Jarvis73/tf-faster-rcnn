@@ -17,14 +17,16 @@ from model.bbox_transform import bbox_transform
 
 
 def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anchors, num_anchors):
-    """Same as the anchor target layer in original Fast/er RCNN 
+    """
+    Same as the anchor target layer in original Fast/er RCNN 
 
-    ### Params:
-        * `rpn_cls_score`:      [bs, w*9, h, 2]
-        * `gt_boxes`:           [?, 5]
-        * `im_info`:            [2]
-        * `_feat_stride`:       16
-        * `all_anchors`:        [w*h*9, 4]
+    Params
+    ---
+    `rpn_cls_score`:      [bs, w*9, h, 2]
+    `gt_boxes`:           [?, 5]
+    `im_info`:            [2]
+    `_feat_stride`:       16
+    `all_anchors`:        [w*h*9, 4]
     """
     A = num_anchors
     total_anchors = all_anchors.shape[0]
@@ -99,8 +101,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
 
     bbox_inside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
     # only the positive ones have regression targets
-    bbox_inside_weights[labels == 1, :] = np.array(
-        cfg.TRAIN.RPN_BBOX_INSIDE_WEIGHTS)
+    bbox_inside_weights[labels == 1, :] = np.array(cfg.TRAIN.RPN_BBOX_INSIDE_WEIGHTS)
 
     bbox_outside_weights = np.zeros((len(inds_inside), 4), dtype=np.float32)
     if cfg.TRAIN.RPN_POSITIVE_WEIGHT < 0:
@@ -121,10 +122,8 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     # map up to original set of anchors
     labels = _unmap(labels, total_anchors, inds_inside, fill=-1)                # [h*w*9]
     bbox_targets = _unmap(bbox_targets, total_anchors, inds_inside, fill=0)     # [h*w*9, 4]
-    bbox_inside_weights = _unmap(
-        bbox_inside_weights, total_anchors, inds_inside, fill=0)                # [h*w*9, 4]
-    bbox_outside_weights = _unmap(
-        bbox_outside_weights, total_anchors, inds_inside, fill=0)
+    bbox_inside_weights = _unmap(bbox_inside_weights, total_anchors, inds_inside, fill=0) # [h*w*9, 4]
+    bbox_outside_weights = _unmap(bbox_outside_weights, total_anchors, inds_inside, fill=0)
 
     # labels
     labels = labels.reshape((1, height, width, A)).transpose(0, 3, 1, 2)
@@ -132,19 +131,16 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     rpn_labels = labels
 
     # bbox_targets
-    bbox_targets = bbox_targets \
-        .reshape((1, height, width, A * 4))
+    bbox_targets = bbox_targets.reshape((1, height, width, A * 4))
 
     rpn_bbox_targets = bbox_targets
     # bbox_inside_weights
-    bbox_inside_weights = bbox_inside_weights \
-        .reshape((1, height, width, A * 4))
+    bbox_inside_weights = bbox_inside_weights.reshape((1, height, width, A * 4))
 
     rpn_bbox_inside_weights = bbox_inside_weights
 
     # bbox_outside_weights
-    bbox_outside_weights = bbox_outside_weights \
-        .reshape((1, height, width, A * 4))
+    bbox_outside_weights = bbox_outside_weights.reshape((1, height, width, A * 4))
 
     rpn_bbox_outside_weights = bbox_outside_weights
     return rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights

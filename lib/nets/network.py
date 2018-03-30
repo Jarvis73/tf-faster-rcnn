@@ -89,6 +89,7 @@ class Network(object):
         return tf.nn.softmax(bottom, name=name)
 
     def _proposal_top_layer(self, rpn_cls_prob, rpn_bbox_pred, name):
+        """ Wrapper function for proposal_top_layer """
         with tf.variable_scope(name) as scope:
             rois, rpn_scores = tf.py_func(proposal_top_layer,
                                           [rpn_cls_prob, rpn_bbox_pred, self._im_info,
@@ -100,6 +101,7 @@ class Network(object):
         return rois, rpn_scores
 
     def _proposal_layer(self, rpn_cls_prob, rpn_bbox_pred, name):
+        """ Wrapper function for proposal_layer """
         with tf.variable_scope(name) as scope:
             rois, rpn_scores = tf.py_func(proposal_layer,
                                           [rpn_cls_prob, rpn_bbox_pred, self._im_info, self._mode,
@@ -144,6 +146,7 @@ class Network(object):
         return tf.nn.dropout(bottom, ratio, name=name)
 
     def _anchor_target_layer(self, rpn_cls_score, name):
+        """ Wrapper function for anchor_target_layer """
         with tf.variable_scope(name) as scope:
             rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = tf.py_func(
                 anchor_target_layer,
@@ -152,12 +155,10 @@ class Network(object):
                 [tf.float32, tf.float32, tf.float32, tf.float32],
                 name="anchor_target")
 
-            rpn_labels.set_shape([1, 1, None, None])    # [1, 1, h*9, w]
-            rpn_bbox_targets.set_shape([1, None, None, self._num_anchors * 4])  # [1, h, w, 9*4]
-            rpn_bbox_inside_weights.set_shape(
-                [1, None, None, self._num_anchors * 4])     # [1, h, w, 9*4]
-            rpn_bbox_outside_weights.set_shape(
-                [1, None, None, self._num_anchors * 4])     # [1, h, w, 9*4]
+            rpn_labels.set_shape([1, 1, None, None])                                    # [1, 1, h*9, w]
+            rpn_bbox_targets.set_shape([1, None, None, self._num_anchors * 4])          # [1, h, w, 9*4]
+            rpn_bbox_inside_weights.set_shape([1, None, None, self._num_anchors * 4])   # [1, h, w, 9*4]
+            rpn_bbox_outside_weights.set_shape([1, None, None, self._num_anchors * 4])  # [1, h, w, 9*4]
 
             rpn_labels = tf.to_int32(rpn_labels, name="to_int32")
             self._anchor_targets['rpn_labels'] = rpn_labels
@@ -170,6 +171,7 @@ class Network(object):
         return rpn_labels
 
     def _proposal_target_layer(self, rois, roi_scores, name):
+        """ Wrapper function for proposal_target_layer """
         with tf.variable_scope(name) as scope:
             rois, roi_scores, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights = tf.py_func(
                 proposal_target_layer,
@@ -181,16 +183,12 @@ class Network(object):
             rois.set_shape([cfg.TRAIN.BATCH_SIZE, 5])
             roi_scores.set_shape([cfg.TRAIN.BATCH_SIZE])
             labels.set_shape([cfg.TRAIN.BATCH_SIZE, 1])
-            bbox_targets.set_shape(
-                [cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
-            bbox_inside_weights.set_shape(
-                [cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
-            bbox_outside_weights.set_shape(
-                [cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
+            bbox_targets.set_shape([cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
+            bbox_inside_weights.set_shape[cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
+            bbox_outside_weights.set_shape([cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
 
             self._proposal_targets['rois'] = rois
-            self._proposal_targets['labels'] = tf.to_int32(
-                labels, name="to_int32")
+            self._proposal_targets['labels'] = tf.to_int32(labels, name="to_int32")
             self._proposal_targets['bbox_targets'] = bbox_targets
             self._proposal_targets['bbox_inside_weights'] = bbox_inside_weights
             self._proposal_targets['bbox_outside_weights'] = bbox_outside_weights
@@ -200,6 +198,7 @@ class Network(object):
             return rois, roi_scores
 
     def _anchor_component(self):
+        """ Wrapper function for generate_anchors_pre """
         with tf.variable_scope('ANCHOR_' + self._tag) as scope:
             # just to get the shape right
             # height and width of the feature maps
@@ -218,7 +217,7 @@ class Network(object):
             self._anchors = anchors
             self._anchor_length = anchor_length
 
-    def _build_network(self, is_training=True):
+    def _build_network(self, is_training=True, only_rpn=False):
         # select weight initializers
         if cfg.TRAIN.TRUNCATED:
             initializer = tf.truncated_normal_initializer(mean=0.0, stddev=0.01)
@@ -232,18 +231,20 @@ class Network(object):
             # build the anchors for the image
             self._anchor_component()
             # region proposal network
-            rois = self._region_proposal(net_conv, is_training, initializer)
-            # region of interest pooling
-            if cfg.POOLING_MODE == 'crop':
-                pool5 = self._crop_pool_layer(net_conv, rois, "pool5")
-            else:
-                raise NotImplementedError
+            rois = self._region_proposal(net_conv, is_training, initializer, only_rpn=only_rpn)
+            if only_rpn:
+                # region of interest pooling
+                if cfg.POOLING_MODE == 'crop':
+                    pool5 = self._crop_pool_layer(net_conv, rois, "pool5")
+                else:
+                    raise NotImplementedError
 
-        fc7 = self._head_to_tail(pool5, is_training)
-        with tf.variable_scope(self._scope, self._scope):
-            # region classification
-            cls_prob, bbox_pred = self._region_classification(fc7, is_training,
-                                                              initializer, initializer_bbox)
+        if only_rpn:
+            fc7 = self._head_to_tail(pool5, is_training)
+            with tf.variable_scope(self._scope, self._scope):
+                # region classification
+                cls_prob, bbox_pred = self._region_classification(fc7, is_training,
+                                                                  initializer, initializer_bbox)
 
         self._score_summaries.update(self._predictions)
 
@@ -321,12 +322,10 @@ class Network(object):
     def _add_rpn_losses(self, sigma_rpn=3.0):
         with tf.variable_scope('LOSS_' + self._tag) as scope:
             # RPN, class loss
-            rpn_cls_score = tf.reshape(
-                self._predictions['rpn_cls_score_reshape'], [-1, 2])
+            rpn_cls_score = tf.reshape(self._predictions['rpn_cls_score_reshape'], [-1, 2])
             rpn_label = tf.reshape(self._anchor_targets['rpn_labels'], [-1])
             rpn_select = tf.where(tf.not_equal(rpn_label, -1))
-            rpn_cls_score = tf.reshape(
-                tf.gather(rpn_cls_score, rpn_select), [-1, 2])
+            rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score, rpn_select), [-1, 2])
             rpn_label = tf.reshape(tf.gather(rpn_label, rpn_select), [-1])
             rpn_cross_entropy = tf.reduce_mean(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_label))
@@ -347,8 +346,7 @@ class Network(object):
         self._losses['rpn_loss_box'] = rpn_loss_box
 
         loss = rpn_cross_entropy + rpn_loss_box
-        regularization_loss = tf.add_n(
-            tf.losses.get_regularization_losses(), 'regu')
+        regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), 'regu')
         self._losses['total_loss'] = loss + regularization_loss
 
         self._event_summaries.update(self._losses)
@@ -356,7 +354,7 @@ class Network(object):
     return loss
 
 
-    def _region_proposal(self, net_conv, is_training, initializer):
+    def _region_proposal(self, net_conv, is_training, initializer, only_rpn=False):
         rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], 
                           trainable=is_training,
                           weights_initializer=initializer,
@@ -367,7 +365,7 @@ class Network(object):
                                     weights_initializer=initializer,
                                     padding='VALID', 
                                     activation_fn=None, 
-                                    scope='rpn_cls_score')
+                                    scope='rpn_cls_score')  # [bs, h, w, 9*2]
         # change it so that the score has 2 as its channel size
         rpn_cls_score_reshape = self._reshape_layer(
             rpn_cls_score, 2, 'rpn_cls_score_reshape')  # [bs, h*9, w, 2]
@@ -384,19 +382,17 @@ class Network(object):
                                     activation_fn=None, 
                                     scope='rpn_bbox_pred')  # [bs, h, w, 4*9]
         if is_training:
-            rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
+            rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois", only_rpn=only_rpn)
             rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")
-            # Try to have a deterministic order for the computing graph, for reproducibility
-            with tf.control_dependencies([rpn_labels]):
-                rois, _ = self._proposal_target_layer(
-                    rois, roi_scores, "rpn_rois")
+            if only_rpn:
+                # Try to have a deterministic order for the computing graph, for reproducibility
+                with tf.control_dependencies([rpn_labels]):
+                    rois, _ = self._proposal_target_layer(rois, roi_scores, "rpn_rois")
         else:
             if cfg.TEST.MODE == 'nms':
-                rois, _ = self._proposal_layer(
-                    rpn_cls_prob, rpn_bbox_pred, "rois")
+                rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
             elif cfg.TEST.MODE == 'top':
-                rois, _ = self._proposal_top_layer(
-                    rpn_cls_prob, rpn_bbox_pred, "rois")
+                rois, _ = self._proposal_top_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
             else:
                 raise NotImplementedError
 
@@ -433,7 +429,7 @@ class Network(object):
 
     def _head_to_tail(self, pool5, is_training, reuse=None):
         raise NotImplementedError
-    # <Modify>
+    
     def create_architecture(self, mode, num_classes, tag=None,
                             anchor_scales=(8, 16, 32), anchor_ratios=(0.5, 1, 2)):
         """
@@ -483,7 +479,7 @@ class Network(object):
                        weights_regularizer=weights_regularizer,
                        biases_regularizer=biases_regularizer,
                        biases_initializer=tf.constant_initializer(0.0)):
-            rois, cls_prob, bbox_pred = self._build_network(training)
+            rois, cls_prob, bbox_pred = self._build_network(training, only_rpn=True)
 
         layers_to_output = {'rois': rois}
 
