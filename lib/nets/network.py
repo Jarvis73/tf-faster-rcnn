@@ -497,7 +497,7 @@ class Network(object):
         for var in tf.trainable_variables():
             self._train_summaries.append(var)
 
-        if testing:
+        if testing and not cfg.MED_IMG:
             stds = np.tile(
                 np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS), (self._num_classes))
             means = np.tile(
