@@ -16,7 +16,7 @@ if __name__ == '__main__':
     lib_path = osp.join(osp.dirname(__file__), "..")
     sys.path.insert(0, lib_path)
 from datasets.imdb import imdb
-from Liver_QL_Kits import get_mhd_list
+from datasets.Liver_QL_Kits import get_mhd_list
 from model.config import cfg
 
 METType = {
@@ -73,19 +73,26 @@ class liverQL(imdb):
         if osp.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 try:
-                    roidb = pickle.load(fid)
+                    roidb, self._image_index = pickle.load(fid)
                 except:
-                    roidb = pickle.load(fid, encoding='bytes')
+                    roidb, self._image_index = pickle.load(fid, encoding='bytes')
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_LiverQL_annotation(fpath) for fpath in self.image_index]
-        gt_roidb = [roi for roi in gt_roidb if roi['boxes'] is not None]
+        keep_inds = [i for i, roi in enumerate(gt_roidb) if roi['boxes'] is not None]
+        gt_roidb_filtered = []
+        image_index_filtered = []
+        for i in keep_inds:
+            gt_roidb_filtered.append(gt_roidb[i])
+            image_index_filtered.append(self.image_index[i])
+        self._image_index = image_index_filtered
+
         with open(cache_file, 'wb') as fid:
-            pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
+            pickle.dump((gt_roidb_filtered, self._image_index), fid, pickle.HIGHEST_PROTOCOL)
         print('Wrote gt roidb to {}'.format(cache_file))
 
-        return gt_roidb
+        return gt_roidb_filtered
     
     def _load_LiverQL_annotation(self, filepath):
         """ Load image and bounding boxes info from mhd/raw file in the LiverQL dataset.
@@ -119,10 +126,10 @@ class liverQL(imdb):
                 'flipped': False,
                 'seg_areas': seg_areas}
 
-    def _mhd_reader(self, rawpath):
+    def _mhd_reader(self, mhdpath):
         meta_info = {}
         # read .mhd file 
-        with open(rawpath, 'r') as fmhd:
+        with open(mhdpath, 'r') as fmhd:
             for line in fmhd.readlines():
                 parts = line.split()
                 meta_info[parts[0]] = ' '.join(parts[2:])
@@ -138,10 +145,10 @@ class liverQL(imdb):
         meta_info['ElementSpacing'] = [eval(ele) for ele in meta_info['ElementSpacing'].split()]
         meta_info['ElementByteOrderMSB'] = eval(meta_info['ElementByteOrderMSB'])
 
-        raw_path = osp.join(osp.dirname(rawpath), meta_info['ElementDataFile'])
+        rawpath = osp.join(osp.dirname(mhdpath), meta_info['ElementDataFile'])
 
         # read .raw file
-        with open(raw_path, 'rb') as fraw:
+        with open(rawpath, 'rb') as fraw:
             buffer = fraw.read()
         
         raw_image = np.frombuffer(buffer, dtype=METType[meta_info['ElementType']])
@@ -158,10 +165,10 @@ class liverQL(imdb):
             return None
         
         bbox = [
-            np.min(mask_pixels[0]),
             np.min(mask_pixels[1]),
-            np.max(mask_pixels[0]),
-            np.max(mask_pixels[1])
+            np.min(mask_pixels[0]),
+            np.max(mask_pixels[1]),
+            np.max(mask_pixels[0])
         ]
 
         return bbox

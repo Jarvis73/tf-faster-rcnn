@@ -68,7 +68,7 @@ import utils.cython_bbox
 import pickle
 import subprocess
 import uuid
-from voc_eval import voc_eval
+from datasets.voc_eval import voc_eval
 from model.config import cfg
 
 

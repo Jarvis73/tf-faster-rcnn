@@ -95,9 +95,11 @@ def _get_medical_image_blob(roidb):
         processed_ims.append(im)
     
     num_images = len(processed_ims)
-    blob = np.zeros((num_images, cfg.TRAIN.MAX_SIZE, cfg.TRAIN.MAX_SIZE, 1),
+    blob = np.zeros((num_images, cfg.TRAIN.MAX_SIZE, cfg.TRAIN.MAX_SIZE, 3),
                     dtype=np.float32)
     for i in range(num_images):
-        blob[i,...] = processed_ims[i]
+        blob[i,:,:,0] = processed_ims[i]
+        blob[i,:,:,1] = processed_ims[i]
+        blob[i,:,:,2] = processed_ims[i]
 
     return blob

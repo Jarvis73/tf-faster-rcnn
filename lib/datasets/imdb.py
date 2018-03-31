@@ -108,16 +108,20 @@ class imdb(object):
         """
         Get all the image width
         """
-        return [PIL.Image.open(self.image_path_at(i)).size[0]
-                for i in range(self.num_images)]
+        if cfg.MED_IMG:
+            widths = [cfg.MED_IMG_SIZE[1]] * len(self.roidb)
+        else:
+            widths = [PIL.Image.open(self.image_path_at(i)).size[0]
+                        for i in range(self.num_images)]
+        return widths
 
     def append_flipped_images(self):
         """
         WARNING: This function didn't double `self.num_images`, 
                  but has doubled `self._image_index`
         """
-        num_images = self.num_images
-        widths = self._get_widths()
+        widths = self._get_widths()     # Cannot change there two lines, use self.roidb
+        num_images = self.num_images    # to call self.gt_roidb
         for i in range(num_images):
             boxes = self.roidb[i]['boxes'].copy()
             oldx1 = boxes[:, 0].copy()
@@ -125,7 +129,10 @@ class imdb(object):
             boxes[:, 0] = widths[i] - oldx2 - 1
             boxes[:, 2] = widths[i] - oldx1 - 1
             assert (boxes[:, 2] >= boxes[:, 0]).all()
-            entry = {'boxes': boxes,
+            entry = {'path': self.roidb[i]['path'],
+                     'width': self.roidb[i]['width'],
+                     'height': self.roidb[i]['height'],
+                     'boxes': boxes,
                      'gt_overlaps': self.roidb[i]['gt_overlaps'],
                      'gt_classes': self.roidb[i]['gt_classes'],
                      'flipped': True}

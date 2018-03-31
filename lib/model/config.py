@@ -22,10 +22,16 @@ Task: liver detection
 """
 
 # Flag to show this is medical image and need special process
-__C.MED_IMG = False
+__C.MED_IMG = True
+
+# Medical image size
+__C.MED_IMG_SIZE = [512, 512]
 
 # Type of raw data (medical image)
 __C.MET_TYPE = "MET_SHORT"
+
+# Only train rpn or not
+__C.ONLY_RPN = True
 
 # ----------------------------------------------------------------------------------------
 # Training options
@@ -69,7 +75,7 @@ __C.TRAIN.BG_THRESH_LO = 0.1
 __C.TRAIN.BIAS_DECAY = False
 
 # Iteration intervals for showing the loss during training, on command line interface
-__C.TRAIN.DISPLAY = 10
+__C.TRAIN.DISPLAY = 50
 
 # Whether to double the learning rate for bias
 __C.TRAIN.DOUBLE_BIAS = True
@@ -129,7 +135,7 @@ __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
 
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
 __C.TRAIN.RPN_POST_NMS_TOP_N = 2000
-__C.TRAIN.RPN_POST_NMS_TOP_N_ONLY_RPN = 128
+__C.TRAIN.RPN_POST_NMS_TOP_N_ONLY_RPN = 32
 
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
 __C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
@@ -153,7 +159,7 @@ __C.TRAIN.SNAPSHOT_PREFIX = 'res101_faster_rcnn'
 __C.TRAIN.STEPSIZE = [30000]
 
 # The time interval for saving tensorflow summaries
-__C.TRAIN.SUMMARY_INTERVAL = 180
+__C.TRAIN.SUMMARY_INTERVAL = 60
 
 # Whether to initialize the weights with truncated normal distribution 
 __C.TRAIN.TRUNCATED = False
@@ -280,8 +286,7 @@ __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
 if "Windows" in platform.system():
     __C.DATA_DIR = "C:\\DataSet\\LiverQL"
 elif "Linux" in platform.system():
-    raise ValueError("Wrong data directory!")
-    __C.DATA_DIR = None
+    __C.DATA_DIR = "/home/jarvis/DataSet/LiverQL"
 else:
     raise ValueError("Wrong data directory!")
 

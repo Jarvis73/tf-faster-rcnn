@@ -47,6 +47,7 @@ case ${DATASET} in
     ITERS=70000
     ANCHORS="[8,16,32]"
     RATIOS="[0.5,1,2]"
+    ;;
   *)
     echo "No dataset given"
     exit
@@ -90,4 +91,4 @@ if [ ! -f ${NET_FINAL}.index ]; then      # 如果检查点文件不存在
   fi
 fi
 
-./experiments/scripts/test_faster_rcnn.sh $@
+# ./experiments/scripts/test_faster_rcnn.sh $@

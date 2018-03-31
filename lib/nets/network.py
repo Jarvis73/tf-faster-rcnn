@@ -46,10 +46,18 @@ class Network(object):
             image, tf.to_int32(self._im_info[:2] / self._im_info[2]))
         self._gt_image = tf.reverse(resized, axis=[-1])
 
+    def _add_medical_gt_image(self):
+        low = tf.reduce_min(self._image)
+        high = tf.reduce_max(self._image)
+        self._gt_image = (self._image - low) / (high - low) * 255
+
     def _add_gt_image_summary(self):
         """ use a customized visualization function to visualize the boxes """
         if self._gt_image is None:
-            self._add_gt_image()
+            if cfg.MED_IMG:
+                self._add_medical_gt_image()
+            else:
+                self._add_gt_image()
         image = tf.py_func(draw_bounding_boxes,
                            [self._gt_image, self._gt_boxes, self._im_info],
                            tf.float32, name="gt_boxes")
@@ -100,12 +108,13 @@ class Network(object):
 
         return rois, rpn_scores
 
-    def _proposal_layer(self, rpn_cls_prob, rpn_bbox_pred, name):
+    def _proposal_layer(self, rpn_cls_prob, rpn_bbox_pred, name, only_rpn=False):
         """ Wrapper function for proposal_layer """
         with tf.variable_scope(name) as scope:
             rois, rpn_scores = tf.py_func(proposal_layer,
                                           [rpn_cls_prob, rpn_bbox_pred, self._im_info, self._mode,
-                                           self._feat_stride, self._anchors, self._num_anchors],
+                                           self._feat_stride, self._anchors, self._num_anchors,
+                                           only_rpn],
                                           [tf.float32, tf.float32], name="proposal")
             rois.set_shape([None, 5])   # [0, x1, y1, x2, y2]   [2000, 5]
             rpn_scores.set_shape([None, 1])
@@ -184,7 +193,7 @@ class Network(object):
             roi_scores.set_shape([cfg.TRAIN.BATCH_SIZE])
             labels.set_shape([cfg.TRAIN.BATCH_SIZE, 1])
             bbox_targets.set_shape([cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
-            bbox_inside_weights.set_shape[cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
+            bbox_inside_weights.set_shape([cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
             bbox_outside_weights.set_shape([cfg.TRAIN.BATCH_SIZE, self._num_classes * 4])
 
             self._proposal_targets['rois'] = rois
@@ -232,14 +241,16 @@ class Network(object):
             self._anchor_component()
             # region proposal network
             rois = self._region_proposal(net_conv, is_training, initializer, only_rpn=only_rpn)
-            if only_rpn:
+            if not only_rpn:
                 # region of interest pooling
                 if cfg.POOLING_MODE == 'crop':
                     pool5 = self._crop_pool_layer(net_conv, rois, "pool5")
                 else:
                     raise NotImplementedError
 
-        if only_rpn:
+        cls_prob = None
+        bbox_pred = None
+        if not only_rpn:
             fc7 = self._head_to_tail(pool5, is_training)
             with tf.variable_scope(self._scope, self._scope):
                 # region classification
@@ -342,16 +353,16 @@ class Network(object):
                                                 sigma=sigma_rpn, 
                                                 dim=[1, 2, 3])
 
-        self._losses['rpn_cross_entropy'] = rpn_cross_entropy
-        self._losses['rpn_loss_box'] = rpn_loss_box
+            self._losses['rpn_cross_entropy'] = rpn_cross_entropy
+            self._losses['rpn_loss_box'] = rpn_loss_box
+    
+            loss = rpn_cross_entropy + rpn_loss_box
+            regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), 'regu')
+            self._losses['total_loss'] = loss + regularization_loss
+    
+            self._event_summaries.update(self._losses)
 
-        loss = rpn_cross_entropy + rpn_loss_box
-        regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), 'regu')
-        self._losses['total_loss'] = loss + regularization_loss
-
-        self._event_summaries.update(self._losses)
-
-    return loss
+        return loss
 
 
     def _region_proposal(self, net_conv, is_training, initializer, only_rpn=False):
@@ -384,13 +395,13 @@ class Network(object):
         if is_training:
             rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois", only_rpn=only_rpn)
             rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")
-            if only_rpn:
+            if not only_rpn:
                 # Try to have a deterministic order for the computing graph, for reproducibility
                 with tf.control_dependencies([rpn_labels]):
                     rois, _ = self._proposal_target_layer(rois, roi_scores, "rpn_rois")
         else:
             if cfg.TEST.MODE == 'nms':
-                rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
+                rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois", only_rpn=only_rpn)
             elif cfg.TEST.MODE == 'top':
                 rois, _ = self._proposal_top_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
             else:
@@ -401,7 +412,10 @@ class Network(object):
         self._predictions["rpn_cls_prob"] = rpn_cls_prob
         self._predictions["rpn_cls_pred"] = rpn_cls_pred
         self._predictions["rpn_bbox_pred"] = rpn_bbox_pred
+        # if only_rpn is true, then rois represent the output of rpn
+        # else rois represent the train set of Fast R-CNN.
         self._predictions["rois"] = rois
+        self._predictions["roi_scores"] = roi_scores
 
         return rois
 
@@ -441,10 +455,7 @@ class Network(object):
         `num_classes`: number of classification classes
         `tag`: default is 'default', tag used in tf-scope
         """
-        if cfg.MED_IMG:
-            self._image = tf.placeholder(tf.float32, shape=[1, None, None, 1])
-        else:
-            self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3])
+        self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3])
         self._im_info = tf.placeholder(tf.float32, shape=[3])   
         self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
         self._tag = tag
@@ -479,7 +490,7 @@ class Network(object):
                        weights_regularizer=weights_regularizer,
                        biases_regularizer=biases_regularizer,
                        biases_initializer=tf.constant_initializer(0.0)):
-            rois, cls_prob, bbox_pred = self._build_network(training, only_rpn=True)
+            rois, cls_prob, bbox_pred = self._build_network(training, only_rpn=cfg.ONLY_RPN)
 
         layers_to_output = {'rois': rois}
 
@@ -494,7 +505,10 @@ class Network(object):
             self._predictions["bbox_pred"] *= stds
             self._predictions["bbox_pred"] += means
         else:
-            self._add_losses()
+            if cfg.ONLY_RPN:
+                self._add_rpn_losses()
+            else:
+                self._add_losses()
             layers_to_output.update(self._losses)
 
             val_summaries = []
@@ -552,26 +566,47 @@ class Network(object):
     def train_step(self, sess, blobs, train_op):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
                      self._gt_boxes: blobs['gt_boxes']}
-        rpn_loss_cls, rpn_loss_box, loss_cls, loss_box, loss, _ = sess.run([self._losses["rpn_cross_entropy"],
-                                                                            self._losses['rpn_loss_box'],
-                                                                            self._losses['cross_entropy'],
-                                                                            self._losses['loss_box'],
-                                                                            self._losses['total_loss'],
-                                                                            train_op],
-                                                                           feed_dict=feed_dict)
+        loss_cls = None
+        loss_box = None
+        if not cfg.ONLY_RPN:
+            rpn_loss_cls, rpn_loss_box, loss_cls, \
+            loss_box, loss, _ = sess.run([self._losses["rpn_cross_entropy"],
+                                          self._losses['rpn_loss_box'],
+                                          self._losses['cross_entropy'],
+                                          self._losses['loss_box'],
+                                          self._losses['total_loss'],
+                                          train_op],
+                                         feed_dict=feed_dict)
+        else:
+            rpn_loss_cls, rpn_loss_box, loss, _ = sess.run([self._losses["rpn_cross_entropy"],
+                                                            self._losses['rpn_loss_box'],
+                                                            self._losses['total_loss'],
+                                                            train_op],
+                                                           feed_dict=feed_dict)
+        
         return rpn_loss_cls, rpn_loss_box, loss_cls, loss_box, loss
 
     def train_step_with_summary(self, sess, blobs, train_op):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
                      self._gt_boxes: blobs['gt_boxes']}
-        rpn_loss_cls, rpn_loss_box, loss_cls, loss_box, loss, summary, _ = sess.run([self._losses["rpn_cross_entropy"],
-                                                                                     self._losses['rpn_loss_box'],
-                                                                                     self._losses['cross_entropy'],
-                                                                                     self._losses['loss_box'],
-                                                                                     self._losses['total_loss'],
-                                                                                     self._summary_op,
-                                                                                     train_op],
-                                                                                    feed_dict=feed_dict)
+        loss_cls = None
+        loss_box = None
+        if not cfg.ONLY_RPN:
+            rpn_loss_cls, rpn_loss_box, loss_cls, \
+            loss_box, loss, summary, _ = sess.run([self._losses["rpn_cross_entropy"],
+                                                   self._losses['rpn_loss_box'],
+                                                   self._losses['cross_entropy'],
+                                                   self._losses['loss_box'],
+                                                   self._losses['total_loss'],
+                                                   self._summary_op, train_op],
+                                                  feed_dict=feed_dict)
+        else:
+            rpn_loss_cls, rpn_loss_box, loss, summary, _ = sess.run([self._losses["rpn_cross_entropy"],
+                                                                     self._losses["rpn_loss_box"],
+                                                                     self._losses["total_loss"],
+                                                                     self._summary_op, train_op],
+                                                                    feed_dict=feed_dict)
+        
         return rpn_loss_cls, rpn_loss_box, loss_cls, loss_box, loss, summary
 
     def train_step_no_return(self, sess, blobs, train_op):

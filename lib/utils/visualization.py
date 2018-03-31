@@ -93,6 +93,7 @@ def draw_bounding_boxes(image, gt_boxes, im_info):
 
 if __name__ == '__main__':
     import cv2
+    import matplotlib.pyplot as plt
     test_image_path = "C:/photos/tx.jpg"
     image = cv2.imread(test_image_path, cv2.IMREAD_UNCHANGED)
     image4D = image[np.newaxis, ...]
@@ -100,5 +101,7 @@ if __name__ == '__main__':
                          [400, 50, 600, 650, 1]])
     
     dis = draw_bounding_boxes(image4D, gt_boxes * 3, image.shape)
-    cv2.imshow("window", dis[0])
-    cv2.waitKey(0)
+    plt.imshow(dis[0])
+    plt.show()
+    #cv2.imshow("window", dis[0])
+    #cv2.waitKey(0)

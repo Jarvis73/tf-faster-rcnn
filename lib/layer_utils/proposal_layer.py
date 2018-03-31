@@ -32,7 +32,8 @@ def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, 
 
     Returns
     ---
-
+    `blob`: output or rpn, rois used for Fast R-CNN
+    `scores`: scores of blob
     """
     if type(cfg_key) == bytes:
         cfg_key = cfg_key.decode('utf-8')
