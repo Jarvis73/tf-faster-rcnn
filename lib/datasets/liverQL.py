@@ -47,8 +47,13 @@ class liverQL(imdb):
         self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
         self._image_ext = '.mhd'
         self._image_index, self._num_slices = get_mhd_list(osp.join(self._data_path, "mask"))
+        self.config = {'use_salt': True,
+                       'cleanup': True} 
+
         #default to roidb handler
         self._roidb_handler = self.gt_roidb
+        # Call roidb for convenience
+        _ = self.roidb
 
     def image_path_at(self, i):
         """
@@ -102,7 +107,7 @@ class liverQL(imdb):
         overlaps = np.zeros((1, self.num_classes), dtype=np.float32)
         seg_areas = np.zeros((1), dtype=np.float32)
 
-        meta_info, raw_image = self._mhd_reader(filepath)
+        meta_info, raw_image = self.mhd_reader(filepath)
         bbox = self._bbox_from_mask(raw_image)
 
         if bbox is not None:    # which means this is an empty mask image
@@ -126,7 +131,8 @@ class liverQL(imdb):
                 'flipped': False,
                 'seg_areas': seg_areas}
 
-    def _mhd_reader(self, mhdpath):
+    @staticmethod
+    def mhd_reader(mhdpath):
         meta_info = {}
         # read .mhd file 
         with open(mhdpath, 'r') as fmhd:
@@ -172,6 +178,24 @@ class liverQL(imdb):
         ]
 
         return bbox
+
+    def _write_liverQL_results_file(self, all_boxes):
+        for cls_ind, cls in enumerate(self.classes):
+            if cls == '__background__':
+                continue
+            print('Writing {} liverQL results file'.format(cls))
+            filename = osp.join(self._data_path, 'results_cls_{}.txt'.format(cls))
+            with open(filename, 'w') as f:
+                for im_ind, index in enumerate(self.image_index):
+                    dets = all_boxes[cls_ind][im_ind]
+                    if dets == []:
+                        continue
+                    for k in range(dets.shape[0]):
+                        f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(index, dets[k, -1], dets[k, 0] + 1, dets[k, 1] + 1, dets[k, 2] + 1, dets[k, 3] + 1))
+
+    def evaluate_detections(self, all_boxes, output_dir):
+        self._write_liverQL_results_file(all_boxes)
+
 
 if __name__ == '__main__':
     imdb = liverQL('train', '2018')

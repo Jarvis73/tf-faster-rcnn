@@ -16,6 +16,8 @@ except ImportError:
 import os
 import math
 
+from datasets.liverQL import liverQL
+
 from utils.timer import Timer
 from utils.blob import im_list_to_blob
 
@@ -58,11 +60,22 @@ def _get_image_blob(im):
 
     return blob, np.array(im_scale_factors)
 
+def _get_med_image_blob(im):
+    im_shape = im.shape
+    blob = np.zeros((1, im_shape[0], im_shape[1], 3), dtype=np.float32)
+    for i in range(3):
+        blob[0,:,:,i] = im
+    
+    return blob, np.ones((1), dtype=np.float32)
+
 
 def _get_blobs(im):
     """Convert an image and RoIs within that image into network inputs."""
     blobs = {}
-    blobs['data'], im_scale_factors = _get_image_blob(im)
+    if not cfg.MED_IMG:
+        blobs['data'], im_scale_factors = _get_image_blob(im)
+    else:
+        blobs['data'], im_scale_factors = _get_med_image_blob(im)
 
     return blobs, im_scale_factors
 
@@ -93,23 +106,26 @@ def im_detect(sess, net, im):
     assert len(im_scales) == 1, "Only single-image batch implemented"
 
     im_blob = blobs['data']
-    blobs['im_info'] = np.array(
-        [im_blob.shape[1], im_blob.shape[2], im_scales[0]], dtype=np.float32)
+    blobs['im_info'] = np.array([im_blob.shape[1], im_blob.shape[2], im_scales[0]], dtype=np.float32)
 
-    _, scores, bbox_pred, rois = net.test_image(
-        sess, blobs['data'], blobs['im_info'])
-
-    boxes = rois[:, 1:5] / im_scales[0]
-    scores = np.reshape(scores, [scores.shape[0], -1])
-    bbox_pred = np.reshape(bbox_pred, [bbox_pred.shape[0], -1])
-    if cfg.TEST.BBOX_REG:
-        # Apply bounding-box regression deltas
-        box_deltas = bbox_pred
-        pred_boxes = bbox_transform_inv(boxes, box_deltas)
-        pred_boxes = _clip_boxes(pred_boxes, im.shape)
+    if cfg.ONLY_RPN:
+        rois, scores = net.test_rpn_image(sess, blobs['data'], blobs['im_info'])
+        pred_boxes = np.zeros((rois.shape[0], 8), dtype=np.float32)
+        pred_boxes[:, 4:8] = rois[:, 1:5]
+        scores = np.reshape(scores, [scores.shape[0], -1])
     else:
-        # Simply repeat the boxes, once for each class
-        pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+        _, scores, bbox_pred, rois = net.test_image(sess, blobs['data'], blobs['im_info'])
+        boxes = rois[:, 1:5] / im_scales[0]
+        scores = np.reshape(scores, [scores.shape[0], -1])
+        bbox_pred = np.reshape(bbox_pred, [bbox_pred.shape[0], -1])
+        if cfg.TEST.BBOX_REG:
+            # Apply bounding-box regression deltas
+            box_deltas = bbox_pred
+            pred_boxes = bbox_transform_inv(boxes, box_deltas)
+            pred_boxes = _clip_boxes(pred_boxes, im.shape)
+        else:
+            # Simply repeat the boxes, once for each class
+            pred_boxes = np.tile(boxes, (1, scores.shape[1]))
 
     return scores, pred_boxes
 
@@ -159,7 +175,10 @@ def test_net(sess, net, imdb, weights_filename, max_per_image=100, thresh=0.):
     _t = {'im_detect': Timer(), 'misc': Timer()}
 
     for i in range(num_images):
-        im = cv2.imread(imdb.image_path_at(i))
+        if not cfg.MED_IMG:
+            im = cv2.imread(imdb.image_path_at(i))
+        else:
+            meta_info, im = imdb.mhd_reader(imdb.roidb[i]['path'])
 
         _t['im_detect'].tic()
         scores, boxes = im_detect(sess, net, im)
@@ -199,3 +218,4 @@ def test_net(sess, net, imdb, weights_filename, max_per_image=100, thresh=0.):
 
     print('Evaluating detections')
     imdb.evaluate_detections(all_boxes, output_dir)
+

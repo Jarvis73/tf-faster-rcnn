@@ -401,7 +401,7 @@ class Network(object):
                     rois, _ = self._proposal_target_layer(rois, roi_scores, "rpn_rois")
         else:
             if cfg.TEST.MODE == 'nms':
-                rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois", only_rpn=only_rpn)
+                rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois", only_rpn=only_rpn)
             elif cfg.TEST.MODE == 'top':
                 rois, _ = self._proposal_top_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
             else:
@@ -504,7 +504,7 @@ class Network(object):
                 np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS), (self._num_classes))
             self._predictions["bbox_pred"] *= stds
             self._predictions["bbox_pred"] += means
-        else:
+        elif training:
             if cfg.ONLY_RPN:
                 self._add_rpn_losses()
             else:
@@ -554,6 +554,21 @@ class Network(object):
                                                          self._predictions['rois']],
                                                         feed_dict=feed_dict)
         return cls_score, cls_prob, bbox_pred, rois
+
+    def test_rpn_image(self, sess, image, im_info):
+        feed_dict = {self._image: image, self._im_info: im_info}
+
+        rois, scores = sess.run([
+            self._predictions['rois'],
+            self._predictions['roi_scores']
+        ], feed_dict=feed_dict)
+
+        roi_scores = np.zeros((scores.shape[0], 2), dtype=np.float32)
+        scores = np.reshape(scores, (scores.shape[0],))
+        roi_scores[:, 1] = scores
+        roi_scores[:, 0] = 1. - scores
+
+        return rois, roi_scores
 
     def get_summary(self, sess, blobs):
         """ Get summary of the validation dataset """

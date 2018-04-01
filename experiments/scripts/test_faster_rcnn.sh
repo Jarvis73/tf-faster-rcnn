@@ -8,10 +8,11 @@ export PYTHONUNBUFFERED="True"
 GPU_ID=$1
 DATASET=$2
 NET=$3
+NUM_DETS=$4
 
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:3:$len}
+EXTRA_ARGS=${array[@]:4:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 case ${DATASET} in
@@ -67,6 +68,7 @@ if [[ ! -z  ${EXTRA_ARGS_SLUG}  ]]; then
     --imdb ${TEST_IMDB} \
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
+    --num_dets ${NUM_DETS} \
     --tag ${EXTRA_ARGS_SLUG} \
     --net ${NET} \
     --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
@@ -76,6 +78,7 @@ else
     --imdb ${TEST_IMDB} \
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
+    --num_dets ${NUM_DETS} \
     --net ${NET} \
     --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
           ${EXTRA_ARGS}

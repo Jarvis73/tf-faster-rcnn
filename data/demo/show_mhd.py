@@ -73,4 +73,4 @@ def show_mhd(path, width=400, level=60, outer_val=-1000):
 
 if __name__ == '__main__':
     path = "C:/DataSet/LiverQL/Liver_slices_train/liver/P002_o_21.mhd"
-    show_mhd(path, 800)
+    show_mhd(path)
