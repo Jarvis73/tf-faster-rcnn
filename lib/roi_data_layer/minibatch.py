@@ -15,7 +15,7 @@ import numpy.random as npr
 import cv2
 from model.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
-from datasets.liverQL import METType
+from datasets.Liver_Kits import METType
 
 def get_minibatch(roidb, num_classes):
     """Given a roidb, construct a minibatch sampled from it."""
