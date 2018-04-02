@@ -42,7 +42,7 @@ import numpy as np
 #         __sets[name] = (lambda split=split, year=year: coco(split, year))
 
 # Set up liverQL_<year>_<split>
-for year in ['2018']:
+for year in ['2017', '2018']:
     for split in ['train', 'test']:
         name = 'liverQL_{}_{}'.format(year, split)
         __sets[name] = (lambda split=split, year=year: liverQL(split, year))

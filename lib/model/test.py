@@ -17,6 +17,7 @@ import os
 import math
 
 from datasets.liverQL import liverQL
+from datasets.Liver_Kits import mhd_reader
 
 from utils.timer import Timer
 from utils.blob import im_list_to_blob
@@ -160,7 +161,7 @@ def apply_nms(all_boxes, thresh):
     return nms_boxes
 
 
-def test_net(sess, net, imdb, weights_filename, max_per_image=100, thresh=0.):
+def test_net(sess, net, imdb:liverQL, weights_filename, max_per_image=100, thresh=0.):
     np.random.seed(cfg.RNG_SEED)
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
@@ -178,7 +179,7 @@ def test_net(sess, net, imdb, weights_filename, max_per_image=100, thresh=0.):
         if not cfg.MED_IMG:
             im = cv2.imread(imdb.image_path_at(i))
         else:
-            meta_info, im = imdb.mhd_reader(imdb.roidb[i]['path'])
+            meta_info, im = mhd_reader(imdb.image_index[i])
 
         _t['im_detect'].tic()
         scores, boxes = im_detect(sess, net, im)

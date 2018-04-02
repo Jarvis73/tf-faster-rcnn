@@ -13,19 +13,13 @@ import PIL.Image as Image
 import PIL.ImageColor as ImageColor
 import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
-
-METType = {
-    'MET_CHAR': np.char,
-    'MET_SHORT': np.int16,
-    'MET_LONG': np.int32,
-    'MET_INT': np.int32,
-    'MET_UCHAR': np.uint8,
-    'MET_USHORT': np.uint16,
-    'MET_ULONG': np.uint32,
-    'MET_UINT': np.uint32,
-    'MET_FLOAT': np.float32,
-    'MET_FLOAT': np.float64
-}
+import matplotlib.pyplot as plt
+from matplotlib import patches 
+import os.path as osp
+import sys
+ds_path = osp.join(osp.dirname(__file__), "..", "datasets")
+sys.path.insert(0, ds_path)
+from Liver_Kits import mhd_reader    
 
 STANDARD_COLORS = [
     'AliceBlue', 'Chartreuse', 'Aqua', 'Aquamarine', 'Azure', 'Beige', 'Bisque',
@@ -123,64 +117,39 @@ def draw_bounding_boxes_with_prob(image, gt_boxes, prob, im_info):
     image[0, :] = np.array(disp_image)
     return image
 
+def draw_bounding_boxes_with_plt(image, gt_boxes, probs):
+    fig, ax = plt.subplots(1, 1)
+    ax.imshow(image, cmap='gray')
+    for i in range(gt_boxes.shape[0]):
+        bbox = gt_boxes[i, :]
+        rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], 
+                                 linewidth=1, edgecolor='g', facecolor='none')
+        ax.add_patch(rect)
+        ax.text(bbox[0], bbox[3], "C{:d}-{:.2f}".format(bbox[4], probs[i]), 
+                 style="normal", weight="bold", size=7, color='w', 
+                 bbox={'facecolor': 'green', 'alpha': 0.5, 'pad': 1})
 
-
-
-def _mhd_reader(mhdpath):
-    import os.path as osp
-    meta_info = {}
-    # read .mhd file 
-    with open(mhdpath, 'r') as fmhd:
-        for line in fmhd.readlines():
-            parts = line.split()
-            meta_info[parts[0]] = ' '.join(parts[2:])
-    
-    PrimaryKeys = ['NDims', 'DimSize', 'ElementType', 'ElementSpacing',
-                    'ElementByteOrderMSB', 'ElementDataFile']
-    for key in PrimaryKeys:
-        if not key in meta_info:
-            raise KeyError("Missing key `{}` in meta data of the mhd file".format(key))
-
-    meta_info['NDims'] = int(meta_info['NDims'])
-    meta_info['DimSize'] = [eval(ele) for ele in meta_info['DimSize'].split()]
-    meta_info['ElementSpacing'] = [eval(ele) for ele in meta_info['ElementSpacing'].split()]
-    meta_info['ElementByteOrderMSB'] = eval(meta_info['ElementByteOrderMSB'])
-
-    rawpath = osp.join(osp.dirname(mhdpath), meta_info['ElementDataFile'])
-
-    # read .raw file
-    with open(rawpath, 'rb') as fraw:
-        buffer = fraw.read()
-    
-    raw_image = np.frombuffer(buffer, dtype=METType[meta_info['ElementType']])
-    raw_image = np.reshape(raw_image, meta_info['DimSize'])
-
-    return meta_info, raw_image.copy()
-
-
+    plt.show()
 
 if __name__ == '__main__':
-    import cv2
-    import matplotlib.pyplot as plt
-    # test_image_path = "C:/photos/tx.jpg"
-    # image = cv2.imread(test_image_path, cv2.IMREAD_UNCHANGED)
     results_path = "C:/DataSet/LiverQL/Liver_slices_test/results_cls_liver.txt"
     with open(results_path, 'r') as f:
         while True:
             parts = f.readline().split()
-            _, image = _mhd_reader(parts[0].replace("/home/jarvis", "C:").replace("mask", "liver").replace("_m_", "_o_"))
-            min_val = np.min(image)
-            max_val = np.max(image)
-            image = (image - min_val) / (max_val - min_val) * 255
-            image4D = np.zeros((1, image.shape[0], image.shape[1], 3), dtype=np.float32)
-            for i in range(3):
-                image4D[0,:,:,i] = image
+            _, image = mhd_reader(parts[0].replace("/home/jarvis", "C:").replace("mask", "liver").replace("_m_", "_o_"))
+            boxes = []
+            probs = []
             box = [int(eval(part)) for part in parts[2:]]
             box.append(1)
-            prob = [float(parts[1])]
-            gt_boxes = np.array(box).reshape((1, 5))
-            im_info = (image.shape[0], image.shape[1], 1)
-            dis = draw_bounding_boxes_with_prob(image4D, gt_boxes, prob, im_info)
-            plt.imshow(dis[0])
+            boxes.append(box)
+            probs.append(float(parts[1]))
+            for i in range(2):
+                parts = f.readline().split()
+                box = [int(eval(part)) for part in parts[2:]]
+                box.append(1)
+                boxes.append(box)
+                probs.append(float(parts[1]))
+            gt_boxes = np.array(boxes).reshape((3, 5))
+            draw_bounding_boxes_with_plt(image, gt_boxes, probs)
             plt.show()
     

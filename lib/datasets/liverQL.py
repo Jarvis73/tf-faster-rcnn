@@ -16,21 +16,8 @@ if __name__ == '__main__':
     lib_path = osp.join(osp.dirname(__file__), "..")
     sys.path.insert(0, lib_path)
 from datasets.imdb import imdb
-from datasets.Liver_QL_Kits import get_mhd_list
+from datasets.Liver_Kits import get_mhd_list_with_liver, mhd_reader, bbox_from_mask
 from model.config import cfg
-
-METType = {
-    'MET_CHAR': np.char,
-    'MET_SHORT': np.int16,
-    'MET_LONG': np.int32,
-    'MET_INT': np.int32,
-    'MET_UCHAR': np.uint8,
-    'MET_USHORT': np.uint16,
-    'MET_ULONG': np.uint32,
-    'MET_UINT': np.uint32,
-    'MET_FLOAT': np.float32,
-    'MET_FLOAT': np.float64
-}
 
 
 class liverQL(imdb):
@@ -40,27 +27,23 @@ class liverQL(imdb):
         # name, paths
         self._year = year
         self._image_set = image_set
-        self._data_path = osp.join(cfg.DATA_DIR, 'Liver_slices_' + self._image_set)
+        self._data_path = osp.join(cfg.DATA_DIR, 'Liver_{}_{}'.format(self._year, self._image_set))
         self._classes = ('__background__', # background always index 0
             'liver',
         )
         self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
         self._image_ext = '.mhd'
-        self._image_index, self._num_slices = get_mhd_list(osp.join(self._data_path, "mask"))
-        self.config = {'use_salt': True,
-                       'cleanup': True} 
+        self._image_index = get_mhd_list_with_liver(osp.join(self._data_path, "mask"))
 
         #default to roidb handler
         self._roidb_handler = self.gt_roidb
-        # Call roidb for convenience
-        _ = self.roidb
 
     def image_path_at(self, i):
         """
         We have store the mask .mhd file path which means that we just need replace the 
         string `.mhd` by `.raw` and `mask` by 'liver'.
         """
-        mask_mhd = self.roidb[i]['path']
+        mask_mhd = self.image_index[i]
         mask_dir = osp.dirname(mask_mhd)
         mask_mhd_basename = osp.basename(mask_mhd)
         liver_slices_dir = osp.dirname(mask_dir)
@@ -78,26 +61,19 @@ class liverQL(imdb):
         if osp.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 try:
-                    roidb, self._image_index = pickle.load(fid)
+                    roidb = pickle.load(fid)
                 except:
-                    roidb, self._image_index = pickle.load(fid, encoding='bytes')
+                    roidb = pickle.load(fid, encoding='bytes')
             print('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_LiverQL_annotation(fpath) for fpath in self.image_index]
-        keep_inds = [i for i, roi in enumerate(gt_roidb) if roi['boxes'] is not None]
-        gt_roidb_filtered = []
-        image_index_filtered = []
-        for i in keep_inds:
-            gt_roidb_filtered.append(gt_roidb[i])
-            image_index_filtered.append(self.image_index[i])
-        self._image_index = image_index_filtered
 
         with open(cache_file, 'wb') as fid:
-            pickle.dump((gt_roidb_filtered, self._image_index), fid, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(gt_roidb_filtered, fid, pickle.HIGHEST_PROTOCOL)
         print('Wrote gt roidb to {}'.format(cache_file))
 
-        return gt_roidb_filtered
+        return gt_roidb
     
     def _load_LiverQL_annotation(self, filepath):
         """ Load image and bounding boxes info from mhd/raw file in the LiverQL dataset.
@@ -107,8 +83,8 @@ class liverQL(imdb):
         overlaps = np.zeros((1, self.num_classes), dtype=np.float32)
         seg_areas = np.zeros((1), dtype=np.float32)
 
-        meta_info, raw_image = self.mhd_reader(filepath)
-        bbox = self._bbox_from_mask(raw_image)
+        meta_info, raw_image = mhd_reader(filepath)
+        bbox = bbox_from_mask(raw_image)
 
         if bbox is not None:    # which means this is an empty mask image
             boxes[0,:] = bbox
@@ -122,62 +98,13 @@ class liverQL(imdb):
 
         overlaps = scipy.sparse.csr_matrix(overlaps)
 
-        return {'path': filepath,
-                'width': meta_info['DimSize'][1],
+        return {'width': meta_info['DimSize'][1],
                 'height': meta_info['DimSize'][0],
                 'boxes': boxes,
                 'gt_classes': gt_classes,
                 'gt_overlaps': overlaps,
                 'flipped': False,
                 'seg_areas': seg_areas}
-
-    @staticmethod
-    def mhd_reader(mhdpath):
-        meta_info = {}
-        # read .mhd file 
-        with open(mhdpath, 'r') as fmhd:
-            for line in fmhd.readlines():
-                parts = line.split()
-                meta_info[parts[0]] = ' '.join(parts[2:])
-        
-        PrimaryKeys = ['NDims', 'DimSize', 'ElementType', 'ElementSpacing',
-                        'ElementByteOrderMSB', 'ElementDataFile']
-        for key in PrimaryKeys:
-            if not key in meta_info:
-                raise KeyError("Missing key `{}` in meta data of the mhd file".format(key))
-
-        meta_info['NDims'] = int(meta_info['NDims'])
-        meta_info['DimSize'] = [eval(ele) for ele in meta_info['DimSize'].split()]
-        meta_info['ElementSpacing'] = [eval(ele) for ele in meta_info['ElementSpacing'].split()]
-        meta_info['ElementByteOrderMSB'] = eval(meta_info['ElementByteOrderMSB'])
-
-        rawpath = osp.join(osp.dirname(mhdpath), meta_info['ElementDataFile'])
-
-        # read .raw file
-        with open(rawpath, 'rb') as fraw:
-            buffer = fraw.read()
-        
-        raw_image = np.frombuffer(buffer, dtype=METType[meta_info['ElementType']])
-        raw_image = np.reshape(raw_image, meta_info['DimSize'])
-
-        return meta_info, raw_image 
-
-    def _bbox_from_mask(self, mask):
-        """ Calculate bounding box from a mask image 
-        """
-        bk_value = mask[0, 0]
-        mask_pixels = np.where(mask > bk_value)
-        if mask_pixels[0].size == 0:
-            return None
-        
-        bbox = [
-            np.min(mask_pixels[1]),
-            np.min(mask_pixels[0]),
-            np.max(mask_pixels[1]),
-            np.max(mask_pixels[0])
-        ]
-
-        return bbox
 
     def _write_liverQL_results_file(self, all_boxes):
         for cls_ind, cls in enumerate(self.classes):
