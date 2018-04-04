@@ -36,6 +36,9 @@ __C.MET_TYPE = "MET_SHORT"
 # Only train rpn or not
 __C.ONLY_RPN = True
 
+# Only keep anchors inside the image
+__C.ONLY_INSIDE_ANCHORS = False
+
 # ----------------------------------------------------------------------------------------
 # Training options
 #
@@ -136,13 +139,13 @@ __C.TRAIN.RPN_POSITIVE_WEIGHT = -1.0
 # IOU >= thresh: positive example
 __C.TRAIN.RPN_POSITIVE_OVERLAP = 0.7
 
-# Number of top scoring boxes to keep after applying NMS to RPN proposals
-__C.TRAIN.RPN_POST_NMS_TOP_N = 2000
-__C.TRAIN.RPN_POST_NMS_TOP_N_ONLY_RPN = 32
-
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
 __C.TRAIN.RPN_PRE_NMS_TOP_N = 12000
-__C.TRAIN.RPN_PRE_NMS_TOP_N_ONLY_RPN = 5000
+__C.TRAIN.RPN_PRE_NMS_TOP_N_ONLY_RPN = 3000
+
+# Number of top scoring boxes to keep after applying NMS to RPN proposals
+__C.TRAIN.RPN_POST_NMS_TOP_N = 2000
+__C.TRAIN.RPN_POST_NMS_TOP_N_ONLY_RPN = 500
 
 # Scale to use during training (can list multiple scales)
 # The scale is the pixel size of an image's shortest side
@@ -220,9 +223,12 @@ __C.TEST.RPN_NMS_THRESH = 0.7
 
 # Number of top scoring boxes to keep before apply NMS to RPN proposals
 __C.TEST.RPN_PRE_NMS_TOP_N = 6000
+__C.TEST.RPN_PRE_NMS_TOP_N_ONLY_RPN = 1500
 
 # Number of top scoring boxes to keep after applying NMS to RPN proposals
 __C.TEST.RPN_POST_NMS_TOP_N = 300
+__C.TEST.RPN_POST_NMS_TOP_N_ONLY_RPN = 75
+
 
 # Proposal height and width both need to be greater than RPN_MIN_SIZE (at orig image scale)
 # __C.TEST.RPN_MIN_SIZE = 16

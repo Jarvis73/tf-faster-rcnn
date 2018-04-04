@@ -37,9 +37,12 @@ def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, 
     """
     if type(cfg_key) == bytes:
         cfg_key = cfg_key.decode('utf-8')
-    if only_rpn:
+    if not only_rpn:
         pre_nms_topN = cfg[cfg_key].RPN_PRE_NMS_TOP_N       # 12000 for train, 6000 for test
         post_nms_topN = cfg[cfg_key].RPN_POST_NMS_TOP_N     # 2000  for train, 300  for test
+    else:
+        pre_nms_topN = cfg[cfg_key].RPN_PRE_NMS_TOP_N_ONLY_RPN 
+        post_nms_topN = cfg[cfg_key].RPN_POST_NMS_TOP_N_ONLY_RPN
     nms_thresh = cfg[cfg_key].RPN_NMS_THRESH            # 0.7
 
     # Get the scores and bounding boxes

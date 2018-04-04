@@ -149,7 +149,7 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0, osp.join(osp.dirname(__file__), ".."))
     from datasets.Liver_Kits import bbox_from_mask
-    results_path = "D:/DataSet/LiverQL/Liver_2017_test/results_cls_liver3.txt"
+    results_path = "D:/DataSet/LiverQL/Liver_2017_test/results_cls_liver5.txt"
     with open(results_path, 'r') as f:
         path, prob, bbox = get_line(f)
         tpath = path

@@ -47,7 +47,7 @@ class Network(object):
         self._gt_image = tf.reverse(resized, axis=[-1])
 
     def _add_medical_gt_image(self):
-        self._gt_image = self._image * 255
+        self._gt_image = (self._image + 1.) * 255 / 2.
 
     def _add_gt_image_summary(self):
         """ use a customized visualization function to visualize the boxes """

@@ -13,7 +13,7 @@ from model.config import cfg
 import numpy as np
 import numpy.random as npr
 from utils.cython_bbox import bbox_overlaps
-from model.bbox_transform import bbox_transform
+from model.bbox_transform import bbox_transform, clip_boxes
 
 
 def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anchors, num_anchors):
@@ -22,11 +22,11 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
 
     Params
     ---
-    `rpn_cls_score`:      [bs, w*9, h, 2]
-    `gt_boxes`:           [?, 5]
-    `im_info`:            [2]
-    `_feat_stride`:       16
-    `all_anchors`:        [w*h*9, 4]
+    `rpn_cls_score`: rpn class score before softmax layer, shape is [bs, w*9, h, 2]  
+    `gt_boxes`: ground truth boxes, shape is [?, 5]  
+    `im_info`: image information, three elements
+    `_feat_stride`: feature stride, for example vgg is 16  
+    `all_anchors`: all anchors, shape is [w*h*9, 4]  
     """
     A = num_anchors
     total_anchors = all_anchors.shape[0]
@@ -39,15 +39,18 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
     height, width = rpn_cls_score.shape[1:3]
 
     # only keep anchors inside the image
-    inds_inside = np.where(
-        (all_anchors[:, 0] >= -_allowed_border) &
-        (all_anchors[:, 1] >= -_allowed_border) &
-        (all_anchors[:, 2] < im_info[1] + _allowed_border) &  # width
-        (all_anchors[:, 3] < im_info[0] + _allowed_border)  # height
-    )[0]
-
-    # keep only inside anchors
-    anchors = all_anchors[inds_inside, :]
+    if cfg.ONLY_INSIDE_ANCHORS:
+        inds_inside = np.where(
+            (all_anchors[:, 0] >= -_allowed_border) &
+            (all_anchors[:, 1] >= -_allowed_border) &
+            (all_anchors[:, 2] < im_info[1] + _allowed_border) &  # width
+            (all_anchors[:, 3] < im_info[0] + _allowed_border)  # height
+        )[0]
+        # keep only inside anchors
+        anchors = all_anchors[inds_inside, :]
+    else:
+        inds_inside = np.arange(all_anchors.shape[0])
+        anchors = clip_boxes(all_anchors.copy(), im_info[:2])
 
     # label: 1 is positive, 0 is negative, -1 is dont care
     labels = np.empty((len(inds_inside),), dtype=np.float32)
