@@ -117,11 +117,11 @@ def draw_bounding_boxes_with_prob(image, gt_boxes, prob, im_info):
     image[0, :] = np.array(disp_image)
     return image
 
-def draw_bounding_boxes_with_plt(image, gt_boxes, probs):
+def draw_bounding_boxes_with_plt(image, pred_boxes, gt_boxes, probs):
     fig, ax = plt.subplots(1, 1)
     ax.imshow(image, cmap='gray')
-    for i in range(gt_boxes.shape[0]):
-        bbox = gt_boxes[i, :]
+    for i in range(pred_boxes.shape[0]):
+        bbox = pred_boxes[i, :]
         rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], 
                                  linewidth=1, edgecolor='g', facecolor='none')
         ax.add_patch(rect)
@@ -129,27 +129,44 @@ def draw_bounding_boxes_with_plt(image, gt_boxes, probs):
                  style="normal", weight="bold", size=7, color='w', 
                  bbox={'facecolor': 'green', 'alpha': 0.5, 'pad': 1})
 
+    for i in range(gt_boxes.shape[0]):
+        bbox = gt_boxes[i, :]
+        rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], 
+                                 linewidth=1, edgecolor='b', facecolor='none')
+        ax.add_patch(rect)
+
     plt.show()
 
+def get_line(f):
+    parts = f.readline().split()
+    path = parts[0]
+    prob = float(parts[1])
+    bbox = [int(eval(ele)) for ele in parts[2:]]
+    bbox.append(1)
+    return path, prob, bbox
+
 if __name__ == '__main__':
-    results_path = "C:/DataSet/LiverQL/Liver_slices_test/results_cls_liver.txt"
+    import sys
+    sys.path.insert(0, osp.join(osp.dirname(__file__), ".."))
+    from datasets.Liver_Kits import bbox_from_mask
+    results_path = "D:/DataSet/LiverQL/Liver_2017_test/results_cls_liver3.txt"
     with open(results_path, 'r') as f:
+        path, prob, bbox = get_line(f)
+        tpath = path
         while True:
-            parts = f.readline().split()
-            _, image = mhd_reader(parts[0].replace("/home/jarvis", "C:").replace("mask", "liver").replace("_m_", "_o_"))
             boxes = []
             probs = []
-            box = [int(eval(part)) for part in parts[2:]]
-            box.append(1)
-            boxes.append(box)
-            probs.append(float(parts[1]))
-            for i in range(2):
-                parts = f.readline().split()
-                box = [int(eval(part)) for part in parts[2:]]
-                box.append(1)
-                boxes.append(box)
-                probs.append(float(parts[1]))
-            gt_boxes = np.array(boxes).reshape((3, 5))
-            draw_bounding_boxes_with_plt(image, gt_boxes, probs)
+            while tpath == path:
+                boxes.append(bbox)
+                probs.append(prob)
+                tpath, prob, bbox = get_line(f)
+            _, image = mhd_reader(path.replace("/home/jarvis", "D:").replace("mask", "liver").replace("_m_", "_o_"))
+            _, mask = mhd_reader(path.replace("/home/jarvis", "D:"))
+            gt_boxes = bbox_from_mask(mask)
+            gt_boxes.append(1)
+            gt_boxes = np.array(gt_boxes).reshape((-1, 5))
+            pred_boxes = np.array(boxes).reshape((-1, 5))
+            draw_bounding_boxes_with_plt(image, pred_boxes, gt_boxes, probs)
             plt.show()
+            path = tpath
     
