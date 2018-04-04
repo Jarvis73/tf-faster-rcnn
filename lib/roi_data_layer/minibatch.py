@@ -101,5 +101,8 @@ def _get_medical_image_blob(roidb):
         blob[i,:,:,0] = processed_ims[i]
         blob[i,:,:,1] = processed_ims[i]
         blob[i,:,:,2] = processed_ims[i]
+    blob /= cfg.MED_IMG_UPPER
+    blob[np.where(blob > 1.)] = 1.
+    blob[np.where(blob < -1.)] = -1.
 
     return blob

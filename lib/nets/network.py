@@ -47,9 +47,7 @@ class Network(object):
         self._gt_image = tf.reverse(resized, axis=[-1])
 
     def _add_medical_gt_image(self):
-        low = tf.reduce_min(self._image)
-        high = tf.reduce_max(self._image)
-        self._gt_image = (self._image - low) / (high - low) * 255
+        self._gt_image = self._image * 255
 
     def _add_gt_image_summary(self):
         """ use a customized visualization function to visualize the boxes """
@@ -369,6 +367,7 @@ class Network(object):
         rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], 
                           trainable=is_training,
                           weights_initializer=initializer,
+                          activation_fn=tf.nn.leaky_relu,
                           scope="rpn_conv/3x3")
         self._act_summaries.append(rpn)
         rpn_cls_score = slim.conv2d(rpn, self._num_anchors * 2, [1, 1], 

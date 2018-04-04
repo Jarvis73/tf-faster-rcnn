@@ -27,6 +27,9 @@ __C.MED_IMG = True
 # Medical image size
 __C.MED_IMG_SIZE = [512, 512]
 
+# Medical image threshold
+__C.MED_IMG_UPPER = 1024
+
 # Type of raw data (medical image)
 __C.MET_TYPE = "MET_SHORT"
 

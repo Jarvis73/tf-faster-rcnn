@@ -203,8 +203,9 @@ class SolverWrapper(object):
         # Need to fix the variables before loading, so that the RGB weights are changed to BGR
         # For VGG16 it also changes the convolutional weights fc6 and fc7 to
         # fully connected weights
-        self.net.fix_variables(sess, self.pretrained_model)
-        print('Fixed.')
+        if not cfg.ONLY_RPN:
+            self.net.fix_variables(sess, self.pretrained_model)
+            print('Fixed.')
         last_snapshot_iter = 0
         rate = cfg.TRAIN.LEARNING_RATE
         stepsizes = list(cfg.TRAIN.STEPSIZE)

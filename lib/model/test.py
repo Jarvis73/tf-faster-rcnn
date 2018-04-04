@@ -66,6 +66,9 @@ def _get_med_image_blob(im):
     blob = np.zeros((1, im_shape[0], im_shape[1], 3), dtype=np.float32)
     for i in range(3):
         blob[0,:,:,i] = im
+    blob /= cfg.MED_IMG_UPPER
+    blob[np.where(blob > 1.)] = 1.
+    blob[np.where(blob < -1.)] = -1.
     
     return blob, np.ones((1), dtype=np.float32)
 
