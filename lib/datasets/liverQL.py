@@ -70,7 +70,7 @@ class liverQL(imdb):
         gt_roidb = [self._load_LiverQL_annotation(fpath) for fpath in self.image_index]
 
         with open(cache_file, 'wb') as fid:
-            pickle.dump(gt_roidb_filtered, fid, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
         print('Wrote gt roidb to {}'.format(cache_file))
 
         return gt_roidb
