@@ -92,6 +92,7 @@ class liverQL(imdb):
         else:
             boxes = None
             seg_areas = None
+            print(filepath)
         cls_ = self._class_to_ind['liver']
         gt_classes[0] = cls_
         overlaps[0, cls_] = 1.0
@@ -115,13 +116,50 @@ class liverQL(imdb):
             with open(filename, 'w') as f:
                 for im_ind, index in enumerate(self.image_index):
                     dets = all_boxes[cls_ind][im_ind]
-                    if dets == []:
+                    if dets.size == 0:
                         continue
                     for k in range(dets.shape[0]):
                         f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(index, dets[k, -1], dets[k, 0] + 1, dets[k, 1] + 1, dets[k, 2] + 1, dets[k, 3] + 1))
 
     def evaluate_detections(self, all_boxes, output_dir):
         self._write_liverQL_results_file(all_boxes)
+
+        # compute IOU
+        total_iou = []
+        iou_file = osp.join(self._data_path, 'iou.txt')
+        f = open(iou_file, 'w')
+        for cls_ind in range(1, self.num_classes):
+            for im_ind in range(self.num_images):
+                dets = all_boxes[cls_ind][im_ind]
+                if dets.size == 0:
+                    total_iou.append(0.)
+                    f.write("0.000 no bbox\n")
+                    continue
+                min_ = np.min(dets, axis=0)
+                max_ = np.max(dets, axis=0)
+                pred_bbox = np.array([
+                    min_[0], min_[1], max_[0], max_[1]
+                ])
+                gt_bbox = self.roidb[im_ind]['boxes'][0]
+                
+                x1 = np.maximum(pred_bbox[0], gt_bbox[0])
+                y1 = np.maximum(pred_bbox[1], gt_bbox[1])
+                x2 = np.minimum(pred_bbox[2], gt_bbox[2])
+                y2 = np.minimum(pred_bbox[3], gt_bbox[3])
+                if x1 >= x2 or y1 >= y2:
+                    total_iou.append(0.)
+                    f.write("0.000 no overlap\n")
+                else:
+                    area1 = (pred_bbox[2] - pred_bbox[0] + 1) * (pred_bbox[3] - pred_bbox[1] + 1)
+                    area2 = (gt_bbox[2] - gt_bbox[0] + 1) * (gt_bbox[3] - gt_bbox[1] + 1)
+                    area3 = (x2 - x1 + 1) * (y2 - y1 + 1)
+                    iou = area3 / (area1 + area2 - area3)
+                    total_iou.append(iou)
+                    f.write("%.3f\n" % iou)
+
+        avg_iou = np.mean(np.array(total_iou))
+        print("Mean iou {:.3f} on {:d} images".format(avg_iou, self.num_images))
+        f.close()
 
 
 if __name__ == '__main__':

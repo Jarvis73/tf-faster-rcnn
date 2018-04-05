@@ -9,10 +9,11 @@ GPU_ID=$1
 DATASET=$2
 NET=$3
 NUM_DETS=$4
+THRESH=$5
 
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:4:$len}
+EXTRA_ARGS=${array[@]:5:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 case ${DATASET} in
@@ -40,9 +41,9 @@ case ${DATASET} in
   liver_ql)
     TRAIN_IMDB="liverQL_2016_train+liverQL_2017_train"
     TEST_IMDB="liverQL_2017_test"
-    STEPSIZE="[70000]"
-    ITERS=100000
-    ANCHORS="[4,8,16]"
+    STEPSIZE="[100000,200000]"
+    ITERS=250000
+    ANCHORS="[2,4,8,16,32]"
     RATIOS="[0.5,1,2]"
     ;; 
   *)
@@ -69,6 +70,7 @@ if [[ ! -z  ${EXTRA_ARGS_SLUG}  ]]; then
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
     --num_dets ${NUM_DETS} \
+    --thresh ${THRESH} \
     --tag ${EXTRA_ARGS_SLUG} \
     --net ${NET} \
     --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
@@ -79,6 +81,7 @@ else
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
     --num_dets ${NUM_DETS} \
+    --thresh ${THRESH} \
     --net ${NET} \
     --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
           ${EXTRA_ARGS}

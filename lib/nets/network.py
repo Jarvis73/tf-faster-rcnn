@@ -11,6 +11,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from tensorflow.contrib.slim import losses
 from tensorflow.contrib.slim import arg_scope
+from tensorflow.python.ops import array_ops
 
 import numpy as np
 
@@ -328,6 +329,21 @@ class Network(object):
 
         return loss
 
+    def _sparse_focal_loss(self, prediction_tensor, target_tensor, alpha=0.25, gamma=2):
+        target_tensor = tf.reshape(target_tensor, [-1, 1])
+        one_minus_target = 1 - target_tensor
+        merged_target = tf.cast(tf.concat((one_minus_target, target_tensor), axis=1), tf.float32)
+        sigmoid_p = tf.nn.sigmoid(prediction_tensor)
+        zeros = array_ops.zeros_like(sigmoid_p, dtype=sigmoid_p.dtype)
+
+        pos_p_sub = array_ops.where(merged_target > zeros, merged_target - sigmoid_p, zeros)
+
+        neg_p_sub = array_ops.where(merged_target > zeros, zeros, sigmoid_p)
+        per_entry_cross_ent = -alpha * (pos_p_sub ** gamma) * tf.log(tf.clip_by_value(sigmoid_p, 1e-8, 1.0)) \
+                        -(1 - alpha) * (neg_p_sub ** gamma) * tf.log(tf.clip_by_value(1.0 - sigmoid_p, 1e-8, 1.0))
+        
+        return tf.reduce_sum(per_entry_cross_ent, axis=1)
+
     def _add_rpn_losses(self, sigma_rpn=3.0):
         with tf.variable_scope('LOSS_' + self._tag) as scope:
             # RPN, class loss
@@ -336,8 +352,10 @@ class Network(object):
             rpn_select = tf.where(tf.not_equal(rpn_label, -1))
             rpn_cls_score = tf.reshape(tf.gather(rpn_cls_score, rpn_select), [-1, 2])
             rpn_label = tf.reshape(tf.gather(rpn_label, rpn_select), [-1])
-            rpn_cross_entropy = tf.reduce_mean(
-                tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_label))
+            rpn_focal_loss = tf.reduce_mean(
+                self._sparse_focal_loss(rpn_cls_score, rpn_label))
+            #rpn_cross_entropy = tf.reduce_mean(
+                #tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_cls_score, labels=rpn_label))
 
             # RPN, bbox loss
             rpn_bbox_pred = self._predictions['rpn_bbox_pred']
@@ -351,10 +369,12 @@ class Network(object):
                                                 sigma=sigma_rpn, 
                                                 dim=[1, 2, 3])
 
-            self._losses['rpn_cross_entropy'] = rpn_cross_entropy
+            #self._losses['rpn_cross_entropy'] = rpn_cross_entropy
+            self._losses['rpn_focal_loss'] = rpn_focal_loss
             self._losses['rpn_loss_box'] = rpn_loss_box
     
-            loss = rpn_cross_entropy + rpn_loss_box
+            #loss = rpn_cross_entropy + rpn_loss_box
+            loss = rpn_focal_loss + rpn_loss_box
             regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), 'regu')
             self._losses['total_loss'] = loss + regularization_loss
     
@@ -584,7 +604,8 @@ class Network(object):
         loss_box = None
         if not cfg.ONLY_RPN:
             rpn_loss_cls, rpn_loss_box, loss_cls, \
-            loss_box, loss, _ = sess.run([self._losses["rpn_cross_entropy"],
+            loss_box, loss, _ = sess.run([#self._losses["rpn_cross_entropy"],
+                                          self._losses["rpn_focal_loss"],
                                           self._losses['rpn_loss_box'],
                                           self._losses['cross_entropy'],
                                           self._losses['loss_box'],
@@ -592,7 +613,8 @@ class Network(object):
                                           train_op],
                                          feed_dict=feed_dict)
         else:
-            rpn_loss_cls, rpn_loss_box, loss, _ = sess.run([self._losses["rpn_cross_entropy"],
+            rpn_loss_cls, rpn_loss_box, loss, _ = sess.run([#self._losses["rpn_cross_entropy"],
+                                                            self._losses["rpn_focal_loss"],
                                                             self._losses['rpn_loss_box'],
                                                             self._losses['total_loss'],
                                                             train_op],
@@ -607,7 +629,8 @@ class Network(object):
         loss_box = None
         if not cfg.ONLY_RPN:
             rpn_loss_cls, rpn_loss_box, loss_cls, \
-            loss_box, loss, summary, _ = sess.run([self._losses["rpn_cross_entropy"],
+            loss_box, loss, summary, _ = sess.run([#self._losses["rpn_cross_entropy"],
+                                                   self._losses["rpn_focal_loss"],
                                                    self._losses['rpn_loss_box'],
                                                    self._losses['cross_entropy'],
                                                    self._losses['loss_box'],
@@ -615,7 +638,8 @@ class Network(object):
                                                    self._summary_op, train_op],
                                                   feed_dict=feed_dict)
         else:
-            rpn_loss_cls, rpn_loss_box, loss, summary, _ = sess.run([self._losses["rpn_cross_entropy"],
+            rpn_loss_cls, rpn_loss_box, loss, summary, _ = sess.run([#self._losses["rpn_cross_entropy"],
+                                                                     self._losses["rpn_focal_loss"],
                                                                      self._losses["rpn_loss_box"],
                                                                      self._losses["total_loss"],
                                                                      self._summary_op, train_op],
@@ -627,3 +651,4 @@ class Network(object):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
                      self._gt_boxes: blobs['gt_boxes']}
         sess.run([train_op], feed_dict=feed_dict)
+# --------------------------------------------------------
