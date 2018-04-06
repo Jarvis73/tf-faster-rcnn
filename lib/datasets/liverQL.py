@@ -138,7 +138,7 @@ class liverQL(imdb):
                 min_ = np.min(dets, axis=0)
                 max_ = np.max(dets, axis=0)
                 pred_bbox = np.array([
-                    min_[0], min_[1], max_[0], max_[1]
+                    min_[0], min_[1], max_[2], max_[3]
                 ])
                 gt_bbox = self.roidb[im_ind]['boxes'][0]
                 
