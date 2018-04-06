@@ -30,4 +30,8 @@
 #### 2018-4-5
 * vgg16.yml, RPN_BATCHSIZE = 512
 
-* Add focal loss and increase batch size for training
+* Add focal loss and decrease batch size for training  
+  I have checked the signal/noise and found that the number of positive anchors is in the range [1, 20], maybe some more while the negative samples are about 10 thousand. So I have to restrict the batch size to 100(found in `./experiment/cfgs/vgg16.yml`). And now I got a mean IoU of **0.480** with test instruction:
+  ```bash
+  bash experiments/scripts/test_faster_rcnn.sh 5 liver_ql vgg16 3 0.02
+  ```
