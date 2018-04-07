@@ -35,3 +35,5 @@
   ```bash
   bash experiments/scripts/test_faster_rcnn.sh 5 liver_ql vgg16 3 0.02
   ```
+
+* Add abdominal mask as anchor filter

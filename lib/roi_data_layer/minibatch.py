@@ -15,7 +15,7 @@ import numpy.random as npr
 import cv2
 from model.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
-from datasets.Liver_Kits import METType
+from datasets.Liver_Kits import METType, abdominal_mask
 
 def get_minibatch(roidb, num_classes):
     """Given a roidb, construct a minibatch sampled from it."""
@@ -31,10 +31,10 @@ def get_minibatch(roidb, num_classes):
     if not cfg.MED_IMG:
         im_blob, im_scales = _get_image_blob(roidb, random_scale_inds)
     else:
-        im_blob = _get_medical_image_blob(roidb)
+        im_blob, abdo_mask = _get_medical_image_blob(roidb)
         im_scales = [1] # compatible with original version
 
-    blobs = {'data': im_blob}
+    blobs = {"data": im_blob, "abdo_mask": abdo_mask}
 
     assert len(im_scales) == 1, "Single batch only"
     assert len(roidb) == 1, "Single batch only"
@@ -85,6 +85,7 @@ def _get_medical_image_blob(roidb):
     """
     num_images = len(roidb)
     processed_ims = []
+    abdo_masks = []
     for i in range(num_images):
         with open(roidb[i]['image'], 'rb') as fid:
             raw_data = fid.read()
@@ -93,16 +94,19 @@ def _get_medical_image_blob(roidb):
         if roidb[i]['flipped']:
             im = im[:, ::-1]
         processed_ims.append(im)
+
+        mask = abdominal_mask(im.copy())
+        abdo_masks.append(mask)
     
     num_images = len(processed_ims)
-    blob = np.zeros((num_images, cfg.TRAIN.MAX_SIZE, cfg.TRAIN.MAX_SIZE, 3),
-                    dtype=np.float32)
+    blob = np.zeros((num_images, cfg.TRAIN.MAX_SIZE, cfg.TRAIN.MAX_SIZE, 3), dtype=np.float32)
+    abdo_mask = np.zeros((num_images, cfg.TRAIN.MAX_SIZE, cfg.TRAIN.MAX_SIZE), dtype=np.bool)
     for i in range(num_images):
         blob[i,:,:,0] = processed_ims[i]
         blob[i,:,:,1] = processed_ims[i]
         blob[i,:,:,2] = processed_ims[i]
+        abdo_mask[i,:,:] = abdo_masks[i]
     blob /= cfg.MED_IMG_UPPER
-    blob[np.where(blob > 1.)] = 1.
-    blob[np.where(blob < -1.)] = -1.
+    blob = np.clip(blob, -1., 1.)
 
-    return blob
+    return blob, abdo_mask

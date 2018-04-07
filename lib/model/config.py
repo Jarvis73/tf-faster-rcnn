@@ -39,6 +39,9 @@ __C.ONLY_RPN = True
 # Only keep anchors inside the image
 __C.ONLY_INSIDE_ANCHORS = False
 
+# Only keep anchors inside abdominal outline
+__C.ONLY_INSIDE_ABDOMEN = True
+
 # ----------------------------------------------------------------------------------------
 # Training options
 #

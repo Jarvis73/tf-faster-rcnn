@@ -13,7 +13,7 @@ from model.bbox_transform import bbox_transform_inv, clip_boxes
 from model.nms_wrapper import nms
 
 
-def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors, only_rpn=False):
+def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, anchors, num_anchors, abdo_mask, only_rpn=False):
     """
     A simplified version compared to fast/er RCNN. For details please see the technical report
     
@@ -50,6 +50,18 @@ def proposal_layer(rpn_cls_prob, rpn_bbox_pred, im_info, cfg_key, _feat_stride, 
     rpn_bbox_pred = rpn_bbox_pred.reshape((-1, 4))
     scores = scores.reshape((-1, 1))
     proposals = bbox_transform_inv(anchors, rpn_bbox_pred)
+
+    if cfg.ONLY_INSIDE_ABDOMEN:
+        anchor_centers = ((proposals[:, 0:2] + proposals[:, 2:4]) / 2).astype(np.int32)
+        shape = abdo_mask.shape[1:3]
+        cond1 = np.logical_and(anchor_centers[:,0] >= 0, anchor_centers[:,0] < shape[1])
+        cond2 = np.logical_and(anchor_centers[:,1] >= 0, anchor_centers[:,1] < shape[0])
+        inds_inside_bounding = np.where(np.logical_and(cond1, cond2))[0]
+        inds_inside_abdomen = np.where(abdo_mask[0][anchor_centers[inds_inside_bounding, 1], \
+            anchor_centers[inds_inside_bounding, 0]])[0]
+        inds_inside = inds_inside_bounding[inds_inside_abdomen]
+        proposals = proposals[inds_inside, :]
+        scores = scores[inds_inside, :]
     proposals = clip_boxes(proposals, im_info[:2])
 
     # Pick the top N region proposals

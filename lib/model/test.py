@@ -113,7 +113,7 @@ def im_detect(sess, net, im):
     blobs['im_info'] = np.array([im_blob.shape[1], im_blob.shape[2], im_scales[0]], dtype=np.float32)
 
     if cfg.ONLY_RPN:
-        rois, scores = net.test_rpn_image(sess, blobs['data'], blobs['im_info'])
+        rois, scores = net.test_rpn_image(sess, blobs)
         pred_boxes = np.zeros((rois.shape[0], 8), dtype=np.float32)
         pred_boxes[:, 4:8] = rois[:, 1:5]
         scores = np.reshape(scores, [scores.shape[0], -1])

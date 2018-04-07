@@ -160,6 +160,7 @@ if __name__ == '__main__':
                 boxes.append(bbox)
                 probs.append(prob)
                 tpath, prob, bbox = get_line(f)
+            print(path)
             _, image = mhd_reader(path.replace("/home/jarvis", "D:").replace("mask", "liver").replace("_m_", "_o_"))
             _, mask = mhd_reader(path.replace("/home/jarvis", "D:"))
             gt_boxes = bbox_from_mask(mask)

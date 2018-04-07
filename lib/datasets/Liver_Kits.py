@@ -3,6 +3,10 @@ import os.path as osp
 from glob import glob
 import numpy as np
 import pickle
+from skimage.segmentation import clear_border
+from skimage.measure import label, regionprops
+from scipy.ndimage import binary_fill_holes
+
 
 METType = {
     'MET_CHAR': np.char,
@@ -80,6 +84,22 @@ def bbox_from_mask(mask, bk_value=None):
     ]
 
     return bbox
+
+def abdominal_mask(image, low_val=-400):
+    binary = image > low_val
+    binary[:,[0,-1]] = False
+    binary[[0,-1],:] = False
+    binary = binary_fill_holes(clear_border(binary))
+    labeled = label(binary)
+    areas = [r.area for r in regionprops(labeled)]
+    areas.sort()
+    if len(areas) > 1:
+        for region in regionprops(labeled):
+            if region.area < areas[-1]:
+                for coords in region.coords:
+                    labeled[coords[0], coords[1]] = 0
+
+    return labeled
 
 def get_mhd_list(SrcDir):
     if not osp.exists(SrcDir):

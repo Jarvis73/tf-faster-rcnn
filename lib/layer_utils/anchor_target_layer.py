@@ -16,7 +16,7 @@ from utils.cython_bbox import bbox_overlaps
 from model.bbox_transform import bbox_transform, clip_boxes
 
 
-def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anchors, num_anchors):
+def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anchors, num_anchors, abdo_mask):
     """
     Same as the anchor target layer in original Fast/er RCNN 
 
@@ -47,6 +47,10 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
             (all_anchors[:, 3] < im_info[0] + _allowed_border)  # height
         )[0]
         # keep only inside anchors
+        anchors = all_anchors[inds_inside, :]
+    elif cfg.ONLY_INSIDE_ABDOMEN:   # only support single image
+        anchor_centers = ((all_anchors[:, 0:2] + all_anchors[:, 2:4]) / 2).astype(np.int32)
+        inds_inside = np.where(abdo_mask[0][anchor_centers[:,1], anchor_centers[:, 0]])[0]
         anchors = all_anchors[inds_inside, :]
     else:
         inds_inside = np.arange(all_anchors.shape[0])

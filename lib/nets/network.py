@@ -113,7 +113,7 @@ class Network(object):
             rois, rpn_scores = tf.py_func(proposal_layer,
                                           [rpn_cls_prob, rpn_bbox_pred, self._im_info, self._mode,
                                            self._feat_stride, self._anchors, self._num_anchors,
-                                           only_rpn],
+                                           self._abdo_mask, only_rpn],
                                           [tf.float32, tf.float32], name="proposal")
             rois.set_shape([None, 5])   # [0, x1, y1, x2, y2]   [2000, 5]
             rpn_scores.set_shape([None, 1])
@@ -159,7 +159,7 @@ class Network(object):
             rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = tf.py_func(
                 anchor_target_layer,
                 [rpn_cls_score, self._gt_boxes, self._im_info,
-                    self._feat_stride, self._anchors, self._num_anchors],
+                    self._feat_stride, self._anchors, self._num_anchors, self._abdo_mask],
                 [tf.float32, tf.float32, tf.float32, tf.float32],
                 name="anchor_target")
 
@@ -377,7 +377,7 @@ class Network(object):
             loss = rpn_focal_loss + rpn_loss_box
             regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), 'regu')
             self._losses['total_loss'] = loss + regularization_loss
-    
+
             self._event_summaries.update(self._losses)
 
         return loss
@@ -477,6 +477,7 @@ class Network(object):
         self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3])
         self._im_info = tf.placeholder(tf.float32, shape=[3])   
         self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
+        self._abdo_mask = tf.placeholder(tf.bool, shape=[1, None, None])
         self._tag = tag
 
         self._num_classes = num_classes
@@ -574,8 +575,9 @@ class Network(object):
                                                         feed_dict=feed_dict)
         return cls_score, cls_prob, bbox_pred, rois
 
-    def test_rpn_image(self, sess, image, im_info):
-        feed_dict = {self._image: image, self._im_info: im_info}
+    def test_rpn_image(self, sess, blobs):
+        feed_dict = {self._image: blobs["data"], self._im_info: blobs["im_info"], 
+                    self._abdo_mask: blobs["abdo_mask"]}
 
         rois, scores = sess.run([
             self._predictions['rois'],
@@ -592,14 +594,14 @@ class Network(object):
     def get_summary(self, sess, blobs):
         """ Get summary of the validation dataset """
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
-                     self._gt_boxes: blobs['gt_boxes']}
+                     self._gt_boxes: blobs['gt_boxes'], self._abdo_mask: blobs["abdo_mask"]}
         summary = sess.run(self._summary_op_val, feed_dict=feed_dict)
 
         return summary
 
     def train_step(self, sess, blobs, train_op):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
-                     self._gt_boxes: blobs['gt_boxes']}
+                     self._gt_boxes: blobs['gt_boxes'], self._abdo_mask: blobs["abdo_mask"]}
         loss_cls = None
         loss_box = None
         if not cfg.ONLY_RPN:
@@ -624,7 +626,7 @@ class Network(object):
 
     def train_step_with_summary(self, sess, blobs, train_op):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
-                     self._gt_boxes: blobs['gt_boxes']}
+                     self._gt_boxes: blobs['gt_boxes'], self._abdo_mask: blobs["abdo_mask"]}
         loss_cls = None
         loss_box = None
         if not cfg.ONLY_RPN:
@@ -649,6 +651,6 @@ class Network(object):
 
     def train_step_no_return(self, sess, blobs, train_op):
         feed_dict = {self._image: blobs['data'], self._im_info: blobs['im_info'],
-                     self._gt_boxes: blobs['gt_boxes']}
+                     self._gt_boxes: blobs['gt_boxes'], self._abdo_mask: blobs["abdo_mask"]}
         sess.run([train_op], feed_dict=feed_dict)
 # --------------------------------------------------------
