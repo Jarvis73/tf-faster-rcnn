@@ -41,7 +41,10 @@ def parse_args():
     parser.add_argument('--num_dets', dest='max_per_image',
                         help='max number of detections per image',
                         default=100, type=int)
-    parser.add_argument('--thresh', dest='threshold',
+    parser.add_argument('--thresh', dest='threshold_pre_nms',
+                        help='threshold of detections',
+                        default='0.', type=float)
+    parser.add_argument('--thresh2', dest='threshold_post_nms',
                         help='threshold of detections',
                         default='0.', type=float)
     parser.add_argument('--tag', dest='tag',
@@ -124,6 +127,7 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         print('Loaded.')
 
-    test_net(sess, net, imdb, filename, max_per_image=args.max_per_image, thresh=args.threshold)
+    test_net(sess, net, imdb, filename, max_per_image=args.max_per_image, 
+            thresh_pre_nms=args.threshold_pre_nms, thresh_post_nms=args.threshold_post_nms)
 
     sess.close()

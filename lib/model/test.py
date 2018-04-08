@@ -17,7 +17,7 @@ import os
 import math
 
 from datasets.liverQL import liverQL
-from datasets.Liver_Kits import mhd_reader
+from datasets.Liver_Kits import mhd_reader, abdominal_mask
 
 from utils.timer import Timer
 from utils.blob import im_list_to_blob
@@ -67,8 +67,7 @@ def _get_med_image_blob(im):
     for i in range(3):
         blob[0,:,:,i] = im
     blob /= cfg.MED_IMG_UPPER
-    blob[np.where(blob > 1.)] = 1.
-    blob[np.where(blob < -1.)] = -1.
+    blob = np.clip(blob, -1., 1.)
     
     return blob, np.ones((1), dtype=np.float32)
 
@@ -80,6 +79,9 @@ def _get_blobs(im):
         blobs['data'], im_scale_factors = _get_image_blob(im)
     else:
         blobs['data'], im_scale_factors = _get_med_image_blob(im)
+        blobs['abdo_mask'] = np.reshape(abdominal_mask(im.copy()), (-1, 512, 512))
+        blobs['im_info'] = np.array([blobs['data'].shape[1], blobs['data'].shape[2], 
+                                    im_scale_factors[0]], dtype=np.float32)
 
     return blobs, im_scale_factors
 
@@ -108,9 +110,6 @@ def _rescale_boxes(boxes, inds, scales):
 def im_detect(sess, net, im):
     blobs, im_scales = _get_blobs(im)
     assert len(im_scales) == 1, "Only single-image batch implemented"
-
-    im_blob = blobs['data']
-    blobs['im_info'] = np.array([im_blob.shape[1], im_blob.shape[2], im_scales[0]], dtype=np.float32)
 
     if cfg.ONLY_RPN:
         rois, scores = net.test_rpn_image(sess, blobs)
@@ -164,7 +163,8 @@ def apply_nms(all_boxes, thresh):
     return nms_boxes
 
 
-def test_net(sess, net, imdb:liverQL, weights_filename, max_per_image=100, thresh=0.):
+def test_net(sess, net, imdb:liverQL, weights_filename, max_per_image=100, 
+            thresh_pre_nms=0., thresh_post_nms=0.):
     np.random.seed(cfg.RNG_SEED)
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
@@ -192,7 +192,7 @@ def test_net(sess, net, imdb:liverQL, weights_filename, max_per_image=100, thres
 
         # skip j = 0, because it's the background class
         for j in range(1, imdb.num_classes):
-            inds = np.where(scores[:, j] > thresh)[0]
+            inds = np.where(scores[:, j] > thresh_pre_nms)[0]
             cls_scores = scores[inds, j]
             cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
             cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
@@ -209,7 +209,10 @@ def test_net(sess, net, imdb:liverQL, weights_filename, max_per_image=100, thres
                 image_thresh = np.sort(image_scores)[-max_per_image]
                 for j in range(1, imdb.num_classes):
                     keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
-                    all_boxes[j][i] = all_boxes[j][i][keep, :]
+                    keep_after_threshold2 = np.where(all_boxes[j][i][keep, -1] >= thresh_post_nms)[0]
+                    if keep_after_threshold2.size == 0: # Only keep the box with highest score
+                        keep_after_threshold2 = np.argmax(all_boxes[j][i][:,[-1]], axis=0)
+                    all_boxes[j][i] = all_boxes[j][i][keep_after_threshold2, :]
         _t['misc'].toc()
 
         print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'

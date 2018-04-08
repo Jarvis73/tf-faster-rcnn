@@ -145,7 +145,12 @@ if __name__ == '__main__':
     if False:
         extract_slices(SrcDir, SrcDir_o, SrcDir_m)
     
-    if True:
+    if False:
         SrcDir_m = "C:/DataSet/LiverQL/3Dircadb1_slices_train/mask/"
         print(len(get_mhd_list_with_liver(SrcDir_m, False)))
 
+    if True:
+        Src = "D:/DataSet/LiverQL/Liver_2017_test/mask/P024_m_6.mhd"
+        _, raw = mhd_reader(Src)
+        box = bbox_from_mask(raw)
+        print(box)

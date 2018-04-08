@@ -9,11 +9,12 @@ GPU_ID=$1
 DATASET=$2
 NET=$3
 NUM_DETS=$4
-THRESH=$5
+THRESH_PRE_NMS=$5
+THRESH_POST_NMS=$6
 
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:5:$len}
+EXTRA_ARGS=${array[@]:6:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 case ${DATASET} in
@@ -70,7 +71,8 @@ if [[ ! -z  ${EXTRA_ARGS_SLUG}  ]]; then
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
     --num_dets ${NUM_DETS} \
-    --thresh ${THRESH} \
+    --thresh ${THRESH_PRE_NMS} \
+    --thresh2 ${THRESH_POST_NMS} \
     --tag ${EXTRA_ARGS_SLUG} \
     --net ${NET} \
     --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
@@ -81,7 +83,8 @@ else
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
     --num_dets ${NUM_DETS} \
-    --thresh ${THRESH} \
+    --thresh ${THRESH_PRE_NMS} \
+    --thresh2 ${THRESH_POST_NMS} \
     --net ${NET} \
     --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
           ${EXTRA_ARGS}
