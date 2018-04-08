@@ -42,6 +42,9 @@ __C.ONLY_INSIDE_ANCHORS = False
 # Only keep anchors inside abdominal outline
 __C.ONLY_INSIDE_ABDOMEN = True
 
+# Use pre-trained model or not
+__C.USE_PRETRAINED_MODEL = False
+
 # ----------------------------------------------------------------------------------------
 # Training options
 #
@@ -257,7 +260,7 @@ __C.RESNET.MAX_POOL = False
 
 # Number of fixed blocks during training, by default the first of all 4 blocks is fixed
 # Range: 0 (none) to 3 (all)
-__C.RESNET.FIXED_BLOCKS = 1
+__C.RESNET.FIXED_BLOCKS = 0
 
 # ----------------------------------------------------------------------------------------
 # MobileNet options

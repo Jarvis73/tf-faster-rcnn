@@ -185,21 +185,22 @@ class SolverWrapper(object):
         # Initial file lists are empty
         np_paths = []
         ss_paths = []
-        # Fresh train directly from ImageNet weights
-        print('Loading initial model weights from {:s}'.format(
-            self.pretrained_model))
         variables = tf.global_variables()
         # Initialize all variables first
         sess.run(tf.variables_initializer(variables, name='init'))
-        var_keep_dic = self.get_variables_in_checkpoint_file(
-            self.pretrained_model)
-        # Get the variables to restore, ignoring the variables to fix
-        variables_to_restore = self.net.get_variables_to_restore(
-            variables, var_keep_dic)
+        if cfg.USE_PRETRAINED_MODEL:
+            # Fresh train directly from ImageNet weights
+            print('Loading initial model weights from {:s}'.format(
+                self.pretrained_model))
+            var_keep_dic = self.get_variables_in_checkpoint_file(
+                self.pretrained_model)
+            # Get the variables to restore, ignoring the variables to fix
+            variables_to_restore = self.net.get_variables_to_restore(
+                variables, var_keep_dic)
 
-        restorer = tf.train.Saver(variables_to_restore)
-        restorer.restore(sess, self.pretrained_model)
-        print('Loaded.')
+            restorer = tf.train.Saver(variables_to_restore)
+            restorer.restore(sess, self.pretrained_model)
+            print('Loaded.')
         # Need to fix the variables before loading, so that the RGB weights are changed to BGR
         # For VGG16 it also changes the convolutional weights fc6 and fc7 to
         # fully connected weights
