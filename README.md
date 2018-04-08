@@ -37,10 +37,11 @@
   bash experiments/scripts/test_faster_rcnn.sh 5 liver_ql vgg16 3 0.02
   ```
 
+#### 2018-4-8
 * Add abdominal mask as anchor filter. 
 
 * Modify to two thresholds in test routine, `THRES_PRE_NMS` and `THRESH_POST_NMS`  
   Up to now, I have gotten a mean IoU of **0.575** with test instuction:
   ```bash
   bash experiments/scripts/test_faster_rcnn.sh 5 liver_ql vgg16 3 0. 0.015
-  ``
+  ```
