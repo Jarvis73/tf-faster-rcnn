@@ -390,7 +390,11 @@ class Network(object):
                           activation_fn=tf.nn.leaky_relu,
                           scope="rpn_conv/3x3")
         self._act_summaries.append(rpn)
-        rpn_cls_score = slim.conv2d(rpn, self._num_anchors * 2, [1, 1], 
+        
+        cls_net = slim.repeat(rpn, 3, slim.conv2d, cfg.RPN_CHANNELS, [3, 3], 
+                                trainable=is_training, activation_fn=tf.nn.leaky_relu, 
+                                scope="cls_subnet")
+        rpn_cls_score = slim.conv2d(cls_net, self._num_anchors * 2, [1, 1], 
                                     trainable=is_training,
                                     weights_initializer=initializer,
                                     padding='VALID', 
@@ -405,7 +409,11 @@ class Network(object):
             rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")
         rpn_cls_prob = self._reshape_layer(
             rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")    # [bs, h, w, 2*9]
-        rpn_bbox_pred = slim.conv2d(rpn, self._num_anchors * 4, [1, 1], 
+
+        reg_net = slim.repeat(rpn, 3, slim.conv2d, cfg.RPN_CHANNELS, [3, 3],
+                                trainable=is_training, activation_fn=tf.nn.leaky_relu,
+                                scope="reg_subnet")
+        rpn_bbox_pred = slim.conv2d(reg_net, self._num_anchors * 4, [1, 1], 
                                     trainable=is_training,
                                     weights_initializer=initializer,
                                     padding='VALID', 

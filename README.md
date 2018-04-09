@@ -48,6 +48,14 @@
 
 #### 2018-4-8
 * Disable pre-trained model
+  I got a mean IoU of **0.676** with test instruction:
+  ```bash
+  bash experiments/scripts/test_faster_rcnn.sh 7 liver_ql vgg16 3 0.01 0.
+  ```
 
 * rpn_loss_box * 5
+ Don't have much improvement from last version.
+
+#### 2018-4-9
+* Add 3 convolution layers to classification subnet and regression subnet of rpn
 
