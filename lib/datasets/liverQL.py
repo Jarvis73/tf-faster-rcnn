@@ -16,7 +16,7 @@ if __name__ == '__main__':
     lib_path = osp.join(osp.dirname(__file__), "..")
     sys.path.insert(0, lib_path)
 from datasets.imdb import imdb
-from datasets.Liver_Kits import get_mhd_list_with_liver, mhd_reader, bbox_from_mask
+from datasets.Liver_Kits import get_mhd_list_with_liver, mhd_reader, bbox_from_mask_2D
 from model.config import cfg
 
 
@@ -84,7 +84,7 @@ class liverQL(imdb):
         seg_areas = np.zeros((1), dtype=np.float32)
 
         meta_info, raw_image = mhd_reader(filepath)
-        bbox = bbox_from_mask(raw_image)
+        bbox = bbox_from_mask_2D(raw_image)
 
         if bbox is not None:    # which means this is an empty mask image
             boxes[0,:] = bbox

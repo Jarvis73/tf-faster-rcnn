@@ -148,8 +148,8 @@ def get_line(f):
 if __name__ == '__main__':
     import sys
     sys.path.insert(0, osp.join(osp.dirname(__file__), ".."))
-    from datasets.Liver_Kits import bbox_from_mask
-    results_path = "D:/DataSet/LiverQL/Liver_2017_test/results_cls_liver3.txt"
+    from datasets.Liver_Kits import bbox_from_mask_2D
+    results_path = "D:/DataSet/LiverQL/Liver_2017_test/results_cls_liver.txt"
     with open(results_path, 'r') as f:
         path, prob, bbox = get_line(f)
         tpath = path
@@ -163,7 +163,7 @@ if __name__ == '__main__':
             print(path)
             _, image = mhd_reader(path.replace("/home/jarvis", "D:").replace("mask", "liver").replace("_m_", "_o_"))
             _, mask = mhd_reader(path.replace("/home/jarvis", "D:"))
-            gt_boxes = bbox_from_mask(mask)
+            gt_boxes = bbox_from_mask_2D(mask)
             gt_boxes.append(1)
             gt_boxes = np.array(gt_boxes).reshape((-1, 5))
             pred_boxes = np.array(boxes).reshape((-1, 5))

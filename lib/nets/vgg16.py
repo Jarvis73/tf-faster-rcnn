@@ -15,6 +15,7 @@ import numpy as np
 
 from nets.network import Network
 from model.config import cfg
+from layer_utils.normalization import group_norm
 
 
 class vgg16(Network):
@@ -26,7 +27,11 @@ class vgg16(Network):
 
     def _image_to_head(self, is_training, reuse=None):
         with tf.variable_scope(self._scope, self._scope, reuse=reuse):
-            with arg_scope([slim.conv2d], activation_fn=tf.nn.leaky_relu):
+            norm_params = {"group": cfg.GROUP, "training": is_training}
+            normalizer_fn = group_norm if cfg.GROUP_NORM else None
+            normalizer_params = norm_params if cfg.GROUP_NORM else None
+            with arg_scope([slim.conv2d], activation_fn=tf.nn.leaky_relu, 
+                            normalizer_fn=normalizer_fn, normalizer_params=normalizer_params):
                 net = slim.repeat(self._image, 2, slim.conv2d, 64, [3, 3],
                                   trainable=is_training, scope='conv1')
                 net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool1')

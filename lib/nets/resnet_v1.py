@@ -38,7 +38,7 @@ def resnet_arg_scope(is_training=True,
         weights_regularizer=slim.l2_regularizer(cfg.TRAIN.WEIGHT_DECAY),
         weights_initializer=slim.variance_scaling_initializer(),
         trainable=is_training,
-        activation_fn=tf.nn.relu,
+        activation_fn=tf.nn.leaky_relu,
         normalizer_fn=slim.batch_norm,
             normalizer_params=batch_norm_params):
         with arg_scope([slim.batch_norm], **batch_norm_params) as arg_sc:

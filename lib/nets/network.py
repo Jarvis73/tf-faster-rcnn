@@ -20,6 +20,7 @@ from layer_utils.proposal_layer import proposal_layer
 from layer_utils.proposal_top_layer import proposal_top_layer
 from layer_utils.anchor_target_layer import anchor_target_layer
 from layer_utils.proposal_target_layer import proposal_target_layer
+from layer_utils.normalization import group_norm
 from utils.visualization import draw_bounding_boxes
 
 from model.config import cfg
@@ -370,8 +371,8 @@ class Network(object):
                                                 dim=[1, 2, 3])
 
             #self._losses['rpn_cross_entropy'] = rpn_cross_entropy
-            self._losses['rpn_focal_loss'] = rpn_focal_loss
-            self._losses['rpn_loss_box'] = rpn_loss_box
+            self._losses['rpn_focal_loss'] = rpn_focal_loss * cfg.CLS_WEIGHT
+            self._losses['rpn_loss_box'] = rpn_loss_box * cfg.BBOX_WEIGHT
     
             #loss = rpn_cross_entropy + rpn_loss_box
             loss = rpn_focal_loss + rpn_loss_box
@@ -382,21 +383,23 @@ class Network(object):
 
         return loss
 
-
     def _region_proposal(self, net_conv, is_training, initializer, only_rpn=False):
-        rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], 
-                          trainable=is_training,
-                          weights_initializer=initializer,
-                          activation_fn=tf.nn.leaky_relu,
-                          scope="rpn_conv/3x3")
-        self._act_summaries.append(rpn)
+        norm_params = {"group": cfg.GROUP, "training": is_training}
+        normalizer_fn = group_norm if cfg.GROUP_NORM else None
+        normalizer_params = norm_params if cfg.GROUP_NORM else None
+        with arg_scope([slim.conv2d], activation_fn=tf.nn.leaky_relu, 
+                        normalizer_fn=normalizer_fn, normalizer_params=normalizer_params,
+                        weights_initializer=initializer, trainable=is_training):
+            rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], 
+                              scope="rpn_conv/3x3")
+            self._act_summaries.append(rpn)
         
-        cls_net = slim.repeat(rpn, 3, slim.conv2d, cfg.RPN_CHANNELS, [3, 3], 
-                                trainable=is_training, activation_fn=tf.nn.leaky_relu, 
-                                scope="cls_subnet")
+            cls_net = slim.repeat(rpn, 3, slim.conv2d, cfg.RPN_CHANNELS, [3, 3], scope="cls_subnet")
+
+            reg_net = slim.repeat(rpn, 3, slim.conv2d, cfg.RPN_CHANNELS, [3, 3], scope="reg_subnet")
+
         rpn_cls_score = slim.conv2d(cls_net, self._num_anchors * 2, [1, 1], 
                                     trainable=is_training,
-                                    weights_initializer=initializer,
                                     padding='VALID', 
                                     activation_fn=None, 
                                     scope='rpn_cls_score')  # [bs, h, w, 9*2]
@@ -410,12 +413,8 @@ class Network(object):
         rpn_cls_prob = self._reshape_layer(
             rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")    # [bs, h, w, 2*9]
 
-        reg_net = slim.repeat(rpn, 3, slim.conv2d, cfg.RPN_CHANNELS, [3, 3],
-                                trainable=is_training, activation_fn=tf.nn.leaky_relu,
-                                scope="reg_subnet")
         rpn_bbox_pred = slim.conv2d(reg_net, self._num_anchors * 4, [1, 1], 
                                     trainable=is_training,
-                                    weights_initializer=initializer,
                                     padding='VALID', 
                                     activation_fn=None, 
                                     scope='rpn_bbox_pred')  # [bs, h, w, 4*9]

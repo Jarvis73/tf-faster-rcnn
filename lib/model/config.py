@@ -45,6 +45,18 @@ __C.ONLY_INSIDE_ABDOMEN = True
 # Use pre-trained model or not
 __C.USE_PRETRAINED_MODEL = False
 
+# weight for bbox reg loss
+__C.BBOX_WEIGHT = 20.
+
+# weight for cls loss
+__C.CLS_WEIGHT = 10.
+
+# group normalization, group number
+__C.GROUP = 32
+
+# whether use group norm
+__C.GROUP_NORM = False
+
 # ----------------------------------------------------------------------------------------
 # Training options
 #

@@ -47,15 +47,31 @@
   ```
 
 #### 2018-4-8
-* Disable pre-trained model
+* Disable pre-trained model (Keep)
   I got a mean IoU of **0.676** with test instruction:
   ```bash
   bash experiments/scripts/test_faster_rcnn.sh 7 liver_ql vgg16 3 0.01 0.
   ```
 
-* rpn_loss_box * 5
+* rpn_loss_box * 5 (Remove)
  Don't have much improvement from last version.
 
 #### 2018-4-9
-* Add 3 convolution layers to classification subnet and regression subnet of rpn
+* Add 3 convolution layers to classification subnet and regression subnet of rpn (Keep)
+  I got a mean IoU of **0.689** with test instruction:
+  ```bash
+  bash experiments/scripts/test_faster_rcnn.sh 7 liver_ql vgg16 3 0. 0.02
+  ```
 
+#### 2018-4-10
+* rpn_loss_box * 2 & step size [300000] (Keep)
+ I got a mean IoU of **0.705** with test instruction:
+  ```bash
+  bash experiments/scripts/test_faster_rcnn.sh 7 liver_ql vgg16 3 0. 0.01
+  ```
+
+#### 2018-4-11
+* Add group normalization to backbone net (Not train, neet tensorflow>=1.5)
+
+* Use resnet-101 backbone (training)
+* Add anchor batch size to 1000 (training)

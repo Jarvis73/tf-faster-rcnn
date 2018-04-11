@@ -67,8 +67,8 @@ def mhd_reader(mhdpath, only_meta=False):
 
     return meta_info, raw_image 
 
-def bbox_from_mask(mask, bk_value=None):
-    """ Calculate bounding box from a mask image 
+def bbox_from_mask_2D(mask, bk_value=None):
+    """ Calculate bounding box from a 2D mask image 
     """
     if bk_value is None:
         bk_value = mask[0, 0]
@@ -79,6 +79,30 @@ def bbox_from_mask(mask, bk_value=None):
     bbox = [
         np.min(mask_pixels[1]),
         np.min(mask_pixels[0]),
+        np.max(mask_pixels[1]),
+        np.max(mask_pixels[0])
+    ]
+
+    return bbox
+
+def bbox_from_mask_3D(mask, bk_value=None):
+    """ Calculate bounding box from a 2D mask image 
+
+    Params
+    ------
+    `mask`: 3D ndarray, mask image with shape [depth, height, width]
+    """
+    if bk_value is None:
+        bk_value = mask[0, 0, 0]
+    mask_pixels = np.where(mask > bk_value)
+    if mask_pixels[0].size == 0:
+        return None
+    
+    bbox = [
+        np.min(mask_pixels[2]),
+        np.min(mask_pixels[1]),
+        np.min(mask_pixels[0]),
+        np.max(mask_pixels[2]),
         np.max(mask_pixels[1]),
         np.max(mask_pixels[0])
     ]
@@ -127,7 +151,7 @@ def get_mhd_list_with_liver(SrcDir, verbose=False):
         if verbose:
             print(mhdfile)
         _, raw = mhd_reader(mhdfile)
-        bbox = bbox_from_mask(raw)
+        bbox = bbox_from_mask_2D(raw)
         if bbox:
             keep_mhd_list.append(mhdfile)
     
@@ -152,5 +176,5 @@ if __name__ == '__main__':
     if True:
         Src = "D:/DataSet/LiverQL/Liver_2017_test/mask/P024_m_6.mhd"
         _, raw = mhd_reader(Src)
-        box = bbox_from_mask(raw)
+        box = bbox_from_mask_2D(raw)
         print(box)
