@@ -109,3 +109,4 @@ def GroupNormalization(inputs,
 # Alias
 group_normalization = GroupNormalization
 group_norm = GroupNormalization
+batch_norm = tf.layers.batch_normalization

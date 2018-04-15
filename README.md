@@ -73,5 +73,15 @@
 #### 2018-4-11
 * Add group normalization to backbone net (Not train, neet tensorflow>=1.5)
 
-* Use resnet-101 backbone (training)
-* Add anchor batch size to 1000 (training)
+* Use resnet-101 backbone (have some bugs)
+* Add anchor batch size to 1000 (not test)
+
+#### 2018-4-14
+* batch norm, weight decay coef = 1e-0 (batch norm is too bad, remove)
+* batch norm, weight decay coef = 1e-1 (batch norm is too bad, remove)
+* (2)mask area lower threshold = 2000 (**0.703**, Keep(2) )
+
+#### 2018-4-15
+* step size [500000] (training)
+* weight decay = 1e-1 (training)
+* (2)anchors=[4,8,16,32]

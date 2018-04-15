@@ -6,7 +6,7 @@ import pickle
 from skimage.segmentation import clear_border
 from skimage.measure import label, regionprops
 from scipy.ndimage import binary_fill_holes
-
+import matplotlib.pyplot as plt
 
 METType = {
     'MET_CHAR': np.char,
@@ -133,9 +133,9 @@ def get_mhd_list(SrcDir):
     size = len(mhd_list)
     return mhd_list, size
 
-def get_mhd_list_with_liver(SrcDir, verbose=False):
+def get_mhd_list_with_liver(SrcDir, threshold=0, verbose=False):
     """ SrcDir should be a mask dir """
-    cache_file = osp.join(SrcDir, "liver_slices.pkl")
+    cache_file = osp.join(SrcDir, "liver_slices_%d.pkl" % threshold)
     if osp.exists(cache_file):
         with open(cache_file, 'rb') as fid:
             try:
@@ -151,8 +151,9 @@ def get_mhd_list_with_liver(SrcDir, verbose=False):
         if verbose:
             print(mhdfile)
         _, raw = mhd_reader(mhdfile)
-        bbox = bbox_from_mask_2D(raw)
-        if bbox:
+        # bbox = bbox_from_mask_2D(raw)
+        area = np.sum(raw > 0)
+        if area > threshold:
             keep_mhd_list.append(mhdfile)
     
     with open(cache_file, 'wb') as fid:
@@ -169,12 +170,48 @@ if __name__ == '__main__':
     if False:
         extract_slices(SrcDir, SrcDir_o, SrcDir_m)
     
-    if False:
-        SrcDir_m = "C:/DataSet/LiverQL/3Dircadb1_slices_train/mask/"
-        print(len(get_mhd_list_with_liver(SrcDir_m, False)))
-
     if True:
-        Src = "D:/DataSet/LiverQL/Liver_2017_test/mask/P024_m_6.mhd"
-        _, raw = mhd_reader(Src)
-        box = bbox_from_mask_2D(raw)
-        print(box)
+        out_file = "D:/DataSet/LiverQL/areas.txt"
+        
+        if not osp.exists(out_file):
+            SrcDir_m1 = "D:/DataSet/LiverQL/Liver_2016_train/mask/"
+            SrcDir_m2 = "D:/DataSet/LiverQL/Liver_2017_train/mask/"
+            SrcDir_m3 = "D:/DataSet/LiverQL/Liver_2017_test/mask/"
+            list1 = get_mhd_list_with_liver(SrcDir_m1, 2000, False)
+            list2 = get_mhd_list_with_liver(SrcDir_m2, 2000, False)
+            mask_list = list1 + list2
+            areas = []
+            with open(out_file, "w") as f:
+                for i, mask_file in enumerate(mask_list):
+                    _, mask = mhd_reader(mask_file)
+                    area = np.sum(mask > 0)
+                    areas.append(area)
+                    f.write("%d\n" % area)
+                    if i % 100 == 0:
+                        print(i)
+        else:
+            with open(out_file, "r") as f:
+                lines = f.readlines()
+            areas = [int(line) for line in lines]
+        
+        plt.hist(areas, 25)
+        plt.show()
+
+
+    if False:
+        SrcDir_m1 = "D:/DataSet/LiverQL/Liver_2016_train/mask/"
+        SrcDir_m2 = "D:/DataSet/LiverQL/Liver_2017_train/mask/"
+        SrcDir_m3 = "D:/DataSet/LiverQL/Liver_2017_test/mask/"
+        list1 = get_mhd_list_with_liver(SrcDir_m1, False)
+        list2 = get_mhd_list_with_liver(SrcDir_m2, False)
+        list3 = get_mhd_list_with_liver(SrcDir_m3, False)
+        mask_list = list1 + list2
+        mask_list2 = list3
+        for mask_file in mask_list2:
+            _, mask = mhd_reader(mask_file)
+            area = np.sum(mask > 0)
+            if area < 2000:
+                plt.imshow(mask)
+                plt.show()
+
+        

@@ -143,9 +143,13 @@ class SolverWrapper(object):
                         if not np.allclose(scale, 1.0):
                             grad = tf.multiply(grad, scale)
                         final_gvs.append((grad, var))
-                train_op = self.optimizer.apply_gradients(final_gvs)
+                update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+                with tf.control_dependencies(update_ops):
+                    train_op = self.optimizer.apply_gradients(final_gvs)
             else:
-                train_op = self.optimizer.apply_gradients(gvs)
+                update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+                with tf.control_dependencies(update_ops):
+                    train_op = self.optimizer.apply_gradients(gvs)
             
             # We will handle the snapshots ourselves
             self.saver = tf.train.Saver(max_to_keep=100000)

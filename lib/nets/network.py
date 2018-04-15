@@ -20,7 +20,7 @@ from layer_utils.proposal_layer import proposal_layer
 from layer_utils.proposal_top_layer import proposal_top_layer
 from layer_utils.anchor_target_layer import anchor_target_layer
 from layer_utils.proposal_target_layer import proposal_target_layer
-from layer_utils.normalization import group_norm
+from layer_utils.normalization import group_norm, batch_norm
 from utils.visualization import draw_bounding_boxes
 
 from model.config import cfg
@@ -377,18 +377,14 @@ class Network(object):
             #loss = rpn_cross_entropy + rpn_loss_box
             loss = rpn_focal_loss + rpn_loss_box
             regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), 'regu')
-            self._losses['total_loss'] = loss + regularization_loss
-
+            self._losses['total_loss'] = loss + regularization_loss * cfg.L2_WEIGHT
+            
             self._event_summaries.update(self._losses)
 
         return loss
 
     def _region_proposal(self, net_conv, is_training, initializer, only_rpn=False):
-        norm_params = {"group": cfg.GROUP, "training": is_training}
-        normalizer_fn = group_norm if cfg.GROUP_NORM else None
-        normalizer_params = norm_params if cfg.GROUP_NORM else None
         with arg_scope([slim.conv2d], activation_fn=tf.nn.leaky_relu, 
-                        normalizer_fn=normalizer_fn, normalizer_params=normalizer_params,
                         weights_initializer=initializer, trainable=is_training):
             rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], 
                               scope="rpn_conv/3x3")

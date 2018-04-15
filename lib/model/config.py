@@ -46,16 +46,22 @@ __C.ONLY_INSIDE_ABDOMEN = True
 __C.USE_PRETRAINED_MODEL = False
 
 # weight for bbox reg loss
-__C.BBOX_WEIGHT = 20.
+__C.BBOX_WEIGHT = 1.
 
 # weight for cls loss
-__C.CLS_WEIGHT = 10.
+__C.CLS_WEIGHT = 2.
+
+# weight decay coefficient
+__C.L2_WEIGHT = 1e-1
 
 # group normalization, group number
 __C.GROUP = 32
 
-# whether use group norm
-__C.GROUP_NORM = False
+# whether use normalization
+__C.NORM = "batch_norm"
+
+# mask area threshold
+__C.MASK_AREA_LO = 2000
 
 # ----------------------------------------------------------------------------------------
 # Training options
@@ -311,7 +317,7 @@ __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..', '..'))
 # Data directory
 #__C.DATA_DIR = osp.abspath(osp.join(__C.ROOT_DIR, 'data'))
 if "Windows" in platform.system():
-    __C.DATA_DIR = "C:\\DataSet\\LiverQL"
+    __C.DATA_DIR = "D:\\DataSet\\LiverQL"
 elif "Linux" in platform.system():
     __C.DATA_DIR = "/home/jarvis/DataSet/LiverQL"
 else:

@@ -15,7 +15,7 @@ import numpy as np
 
 from nets.network import Network
 from model.config import cfg
-from layer_utils.normalization import group_norm
+from layer_utils.normalization import group_norm, batch_norm
 
 
 class vgg16(Network):
@@ -27,9 +27,15 @@ class vgg16(Network):
 
     def _image_to_head(self, is_training, reuse=None):
         with tf.variable_scope(self._scope, self._scope, reuse=reuse):
-            norm_params = {"group": cfg.GROUP, "training": is_training}
-            normalizer_fn = group_norm if cfg.GROUP_NORM else None
-            normalizer_params = norm_params if cfg.GROUP_NORM else None
+            if cfg.NORM == "group_norm":
+                normalizer_fn = group_norm
+                normalizer_params = {"group": cfg.GROUP, "training": is_training}
+            elif cfg.NORM == "batch_norm":
+                normalizer_fn = batch_norm
+                normalizer_params = {"axis": -1, "training": is_training}
+            else:
+                normalizer_fn = None
+                normalizer_params = None
             with arg_scope([slim.conv2d], activation_fn=tf.nn.leaky_relu, 
                             normalizer_fn=normalizer_fn, normalizer_params=normalizer_params):
                 net = slim.repeat(self._image, 2, slim.conv2d, 64, [3, 3],

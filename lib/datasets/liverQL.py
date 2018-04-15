@@ -33,7 +33,7 @@ class liverQL(imdb):
         )
         self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
         self._image_ext = '.mhd'
-        self._image_index = get_mhd_list_with_liver(osp.join(self._data_path, "mask"))
+        self._image_index = get_mhd_list_with_liver(osp.join(self._data_path, "mask"), threshold=cfg.MASK_AREA_LO)
 
         #default to roidb handler
         self._roidb_handler = self.gt_roidb
@@ -57,7 +57,7 @@ class liverQL(imdb):
 
         This function loads/saves from/to a cache file to speed up future calls.
         """
-        cache_file = osp.join(self.cache_path, self.name + '_gt_roidb.pkl')
+        cache_file = osp.join(self.cache_path, self.name + '_gt_roidb_%d.pkl' % cfg.MASK_AREA_LO)
         if osp.exists(cache_file):
             with open(cache_file, 'rb') as fid:
                 try:
@@ -119,7 +119,7 @@ class liverQL(imdb):
                     if dets.size == 0:
                         continue
                     for k in range(dets.shape[0]):
-                        f.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(index, dets[k, -1], dets[k, 0] + 1, dets[k, 1] + 1, dets[k, 2] + 1, dets[k, 3] + 1))
+                        f.write('{:s} {:.6f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(index, dets[k, -1], dets[k, 0] + 1, dets[k, 1] + 1, dets[k, 2] + 1, dets[k, 3] + 1))
 
     def evaluate_detections(self, all_boxes, output_dir):
         self._write_liverQL_results_file(all_boxes)
