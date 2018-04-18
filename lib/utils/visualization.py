@@ -230,6 +230,7 @@ def draw_threshold_iou_curve(filename, a=0, b=1, step=0.01):
 
 if __name__ == '__main__':
     results_path = "D:/DataSet/LiverQL/Liver_2017_test/results_cls_liver.txt"
+    #results_path = "D:/DataSet/LiverQL/Liver_2016_train/results_cls_liver.txt"
     if True:
         import sys
         sys.path.insert(0, osp.join(osp.dirname(__file__), ".."))
@@ -251,14 +252,6 @@ if __name__ == '__main__':
                 gt_boxes.append(1)
                 gt_boxes = np.array(gt_boxes).reshape((-1, 5))
                 pred_boxes = np.array(boxes).reshape((-1, 5))
-                # pred_boxes = np.array([
-                #     np.min(pred_boxes[:,0]),
-                #     np.min(pred_boxes[:,1]),
-                #     np.max(pred_boxes[:,2]),
-                #     np.max(pred_boxes[:,3]),
-                #     1
-                # ]).astype(np.int32).reshape((-1, 5))
-                # probs = [None]
                 draw_bounding_boxes_with_plt(image, pred_boxes, gt_boxes, probs, path, show=True)
                 path = tpath
         

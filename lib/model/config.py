@@ -46,22 +46,24 @@ __C.ONLY_INSIDE_ABDOMEN = True
 __C.USE_PRETRAINED_MODEL = False
 
 # weight for bbox reg loss
-__C.BBOX_WEIGHT = 1.
+__C.BBOX_WEIGHT = 10.
 
 # weight for cls loss
-__C.CLS_WEIGHT = 2.
-
-# weight decay coefficient
-__C.L2_WEIGHT = 1e-1
+__C.CLS_WEIGHT = 20.
 
 # group normalization, group number
 __C.GROUP = 32
 
 # whether use normalization
-__C.NORM = "batch_norm"
+__C.NORM = None #"batch_norm"
 
 # mask area threshold
-__C.MASK_AREA_LO = 2000
+__C.MASK_AREA_LO = 0
+
+# window width and level
+__C.USE_WIDTH_LEVEL = True
+__C.WIDTH = 250
+__C.LEVEL = 55
 
 # ----------------------------------------------------------------------------------------
 # Training options
@@ -302,11 +304,6 @@ __C.MOBILENET.DEPTH_MULTIPLIER = 1.
 # ----------------------------------------------------------------------------------------
 # MISC
 #
-
-# Pixel mean values (BGR order) as a (1, 1, 3) array
-# We use the same pixel mean for all networks even though it's not exactly what
-# they were trained with
-__C.PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 
 # For reproducibility
 __C.RNG_SEED = 3

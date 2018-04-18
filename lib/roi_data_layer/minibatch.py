@@ -106,7 +106,11 @@ def _get_medical_image_blob(roidb):
         blob[i,:,:,1] = processed_ims[i]
         blob[i,:,:,2] = processed_ims[i]
         abdo_mask[i,:,:] = abdo_masks[i]
-    blob /= cfg.MED_IMG_UPPER
-    blob = np.clip(blob, -1., 1.)
+    if cfg.USE_WIDTH_LEVEL:
+        win, wind2, lev = cfg.WIDTH, cfg.WIDTH / 2, cfg.LEVEL
+        blob = (np.clip(blob, lev - wind2, lev + wind2) - (lev - wind2)) / 2**16 * win
+    else:
+        blob /= cfg.MED_IMG_UPPER
+        blob = np.clip(blob, -1., 1.)
 
     return blob, abdo_mask

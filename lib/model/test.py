@@ -66,8 +66,12 @@ def _get_med_image_blob(im):
     blob = np.zeros((1, im_shape[0], im_shape[1], 3), dtype=np.float32)
     for i in range(3):
         blob[0,:,:,i] = im
-    blob /= cfg.MED_IMG_UPPER
-    blob = np.clip(blob, -1., 1.)
+    if cfg.USE_WIDTH_LEVEL:
+        win, wind2, lev = cfg.WIDTH, cfg.WIDTH / 2, cfg.LEVEL
+        blob = (np.clip(blob, lev - wind2, lev + wind2) - (lev - wind2)) / 2**16 * win
+    else:
+        blob /= cfg.MED_IMG_UPPER
+        blob = np.clip(blob, -1., 1.)
     
     return blob, np.ones((1), dtype=np.float32)
 
@@ -182,7 +186,7 @@ def test_net(sess, net, imdb:liverQL, weights_filename, max_per_image=100,
         if not cfg.MED_IMG:
             im = cv2.imread(imdb.image_path_at(i))
         else:
-            meta_info, im = mhd_reader(imdb.image_index[i])
+            meta_info, im = mhd_reader(imdb.image_path_at(i).replace(".raw", ".mhd"))
 
         _t['im_detect'].tic()
         scores, boxes = im_detect(sess, net, im)
@@ -215,9 +219,9 @@ def test_net(sess, net, imdb:liverQL, weights_filename, max_per_image=100,
                     all_boxes[j][i] = all_boxes[j][i][keep_after_threshold2, :]
         _t['misc'].toc()
 
-        print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s'
+        print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s\r'
               .format(i + 1, num_images, _t['im_detect'].average_time,
-                      _t['misc'].average_time))
+                      _t['misc'].average_time), end="")
 
     det_file = os.path.join(output_dir, 'detections.pkl')
     with open(det_file, 'wb') as f:

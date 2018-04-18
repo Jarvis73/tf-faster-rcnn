@@ -49,6 +49,9 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
         # keep only inside anchors
         anchors = all_anchors[inds_inside, :]
     elif cfg.ONLY_INSIDE_ABDOMEN:   # only support single image
+        #for anchor in all_anchors:
+        #    print(anchor, ((anchor[:2] + anchor[2:]) / 2).astype(np.int32))
+        #print(np.sum(abdo_mask))
         anchor_centers = ((all_anchors[:, 0:2] + all_anchors[:, 2:4]) / 2).astype(np.int32)
         inds_inside = np.where(abdo_mask[0][anchor_centers[:,1], anchor_centers[:, 0]])[0]
         anchors = all_anchors[inds_inside, :]
@@ -94,7 +97,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
         disable_inds = npr.choice(
             fg_inds, size=(len(fg_inds) - num_fg), replace=False)
         labels[disable_inds] = -1
-    print("fg_inds: ", len(fg_inds))
+    #print("fg_inds: ", len(fg_inds))
     # subsample negative labels if we have too many
     num_bg = cfg.TRAIN.RPN_BATCHSIZE - np.sum(labels == 1)
     bg_inds = np.where(labels == 0)[0]
@@ -102,7 +105,7 @@ def anchor_target_layer(rpn_cls_score, gt_boxes, im_info, _feat_stride, all_anch
         disable_inds = npr.choice(
             bg_inds, size=(len(bg_inds) - num_bg), replace=False)
         labels[disable_inds] = -1
-    print("bg_inds: ", len(bg_inds))
+    #print("bg_inds: ", len(bg_inds))
     bbox_targets = np.zeros((len(inds_inside), 4), dtype=np.float32)
     bbox_targets = _compute_targets(anchors, gt_boxes[argmax_overlaps, :])  # [tx, ty, tw, th]
 

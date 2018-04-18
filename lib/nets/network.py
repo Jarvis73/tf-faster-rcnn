@@ -49,7 +49,7 @@ class Network(object):
         self._gt_image = tf.reverse(resized, axis=[-1])
 
     def _add_medical_gt_image(self):
-        self._gt_image = (self._image + 1.) * 255 / 2.
+        self._gt_image = self._image if cfg.USE_WIDTH_LEVEL else (self._image + 1.) * 255 / 2.
 
     def _add_gt_image_summary(self):
         """ use a customized visualization function to visualize the boxes """
@@ -375,9 +375,9 @@ class Network(object):
             self._losses['rpn_loss_box'] = rpn_loss_box * cfg.BBOX_WEIGHT
     
             #loss = rpn_cross_entropy + rpn_loss_box
-            loss = rpn_focal_loss + rpn_loss_box
+            loss = rpn_focal_loss * cfg.CLS_WEIGHT + rpn_loss_box * cfg.BBOX_WEIGHT
             regularization_loss = tf.add_n(tf.losses.get_regularization_losses(), 'regu')
-            self._losses['total_loss'] = loss + regularization_loss * cfg.L2_WEIGHT
+            self._losses['total_loss'] = loss + regularization_loss
             
             self._event_summaries.update(self._losses)
 
@@ -407,13 +407,13 @@ class Network(object):
         rpn_cls_pred = tf.argmax(tf.reshape(
             rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")
         rpn_cls_prob = self._reshape_layer(
-            rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")    # [bs, h, w, 2*9]
+            rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")    # [bs, h, w, 9*2]
 
         rpn_bbox_pred = slim.conv2d(reg_net, self._num_anchors * 4, [1, 1], 
                                     trainable=is_training,
                                     padding='VALID', 
                                     activation_fn=None, 
-                                    scope='rpn_bbox_pred')  # [bs, h, w, 4*9]
+                                    scope='rpn_bbox_pred')  # [bs, h, w, 9*4]
         if is_training:
             rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois", only_rpn=only_rpn)
             rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")

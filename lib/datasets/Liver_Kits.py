@@ -170,7 +170,7 @@ if __name__ == '__main__':
     if False:
         extract_slices(SrcDir, SrcDir_o, SrcDir_m)
     
-    if True:
+    if False:
         out_file = "D:/DataSet/LiverQL/areas.txt"
         
         if not osp.exists(out_file):
@@ -214,4 +214,10 @@ if __name__ == '__main__':
                 plt.imshow(mask)
                 plt.show()
 
-        
+    if True:
+        path = "/home/jarvis/DataSet/LiverQL/Liver_2016_train/liver/A014_o_55.mhd"
+        _, image = mhd_reader(path)
+        labels = abdominal_mask(image)
+        print(np.bincount(labels.flat))
+        print(labels.dtype)
+        print(np.max(labels), np.min(labels))

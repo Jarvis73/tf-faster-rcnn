@@ -65,7 +65,7 @@
 
 #### 2018-4-10
 * rpn_loss_box * 2 & step size [300000] (Keep)
- I got a mean IoU of **0.705** with test instruction:
+  I got a mean IoU of **0.705** with test instruction:
   ```bash
   bash experiments/scripts/test_faster_rcnn.sh 7 liver_ql vgg16 3 0. 0.01
   ```
@@ -82,6 +82,13 @@
 * (2)mask area lower threshold = 2000 (**0.703**, Keep(2) )
 
 #### 2018-4-15
-* step size [500000] (training)
-* weight decay = 1e-1 (training)
-* (2)anchors=[4,8,16,32]
+* step size [500000] (Remove)
+
+#### 2018-4-18
+* set width = 250, level = 55, anchors[4,8,12,16,24], ratios[0.5,0.7,1,1.5,2], cls_weight=50, bbox_weight=50 (training - output)
+  I have found a bug in my test routine, that I have used mask image to generate abdomen mask :( f**k.  
+  I got a mean IoU of **0.741** with test instruction:
+  ```bash
+  bash experiments/scripts/test_faster_rcnn.sh 7 liver_ql vgg16 3 0. 0.6
+  ```
+
