@@ -214,10 +214,19 @@ if __name__ == '__main__':
                 plt.imshow(mask)
                 plt.show()
 
-    if True:
-        path = "/home/jarvis/DataSet/LiverQL/Liver_2016_train/liver/A014_o_55.mhd"
+    if False:
+        path = "D:/DataSet/LiverQL/Liver_2018_train/liver/R001_o_26.mhd"
         _, image = mhd_reader(path)
         labels = abdominal_mask(image)
         print(np.bincount(labels.flat))
         print(labels.dtype)
         print(np.max(labels), np.min(labels))
+
+    if True:
+        # check abdomen window (width and level)
+        path = "D:/DataSet/LiverQL/Liver_2018_train/liver/R001_o_26.mhd"
+        _, image = mhd_reader(path)
+        image = (np.clip(image, 55 - 125, 55 + 125) - (55 - 125)) / 2**16 * 250
+        plt.hist(image.flat, 20)
+        #plt.imshow(image, cmap="gray")
+        plt.show()

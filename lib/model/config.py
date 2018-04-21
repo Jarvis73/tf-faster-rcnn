@@ -65,6 +65,12 @@ __C.USE_WIDTH_LEVEL = True
 __C.WIDTH = 250
 __C.LEVEL = 55
 
+# validation frequence
+__C.VAL_ITERS = 3000
+
+# validation numbers
+__C.VAL_NUM = 500
+
 # ----------------------------------------------------------------------------------------
 # Training options
 #

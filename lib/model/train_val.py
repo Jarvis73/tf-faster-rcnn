@@ -11,6 +11,9 @@ from model.config import cfg
 import roi_data_layer.roidb as rdl_roidb
 from roi_data_layer.layer import RoIDataLayer
 from utils.timer import Timer
+from utils.average_precision import DetectionMAP
+from utils.tb_logger import summary_scalar
+from model.nms_wrapper import nms
 try:
     import cPickle as pickle
 except ImportError:
@@ -258,8 +261,8 @@ class SolverWrapper(object):
     def train_model(self, sess, max_iters):
         # Build data layers for both training and validation set
         self.data_layer = RoIDataLayer(self.roidb, self.imdb.num_classes)
-        self.data_layer_val = RoIDataLayer(
-            self.valroidb, self.imdb.num_classes, random=True)
+        self.data_layer_val = RoIDataLayer(self.valroidb, self.imdb.num_classes, random=True)
+        self.data_layer_val_copy = RoIDataLayer(self.valroidb, self.imdb.num_classes)
 
         # Construct the computation graph
         lr, train_op = self.construct_graph(sess)
@@ -324,6 +327,44 @@ class SolverWrapper(object):
                           '>>> rpn_loss_box: %.6f\n >>> lr: %f' %
                           (iter, max_iters, total_loss, rpn_loss_cls, rpn_loss_box, lr.eval()))
                 print('speed: {:.3f}s / iter'.format(timer.average_time))
+
+            # Validation full dataset
+            if iter == 1 or iter % cfg.VAL_ITERS == 0:
+                if cfg.ONLY_RPN:
+                    mAP = DetectionMAP(self.imdb.num_classes - 1)
+                    for i in range(cfg.VAL_NUM):
+                        blobs_val = self.data_layer_val_copy.forward()
+                        rois, scores = self.net.test_rpn_image(sess, blobs_val)
+                        boxes = rois[:, 1:5]
+
+                        # apply threshold
+                        inds = np.where(scores[:,1] > 0.5)[0]
+                        cls_scores = scores[inds, 1]
+                        cls_boxes = boxes[inds, :]
+                        cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])).astype(np.float32, copy=False)
+                        keep = nms(cls_dets, cfg.TEST.NMS)
+                        cls_scores = cls_scores[keep]
+                        cls_boxes = cls_boxes[keep, :]
+                        
+                        if len(cls_scores) > 1:
+                            image_thresh = np.sort(cls_scores)[-1]
+                            keep = np.where(cls_scores >= image_thresh)[0]
+                            cls_scores = cls_scores[keep]
+                            cls_boxes = cls_boxes[keep, :]
+
+                        mAP.evaluate(cls_boxes, 
+                                     np.zeros_like(cls_scores), 
+                                     cls_scores, 
+                                     blobs_val["gt_boxes"][:, 0:4], 
+                                     blobs_val["gt_boxes"][:, 4] - 1)
+                    
+                    precisions, recalls = mAP.compute_precision_recall_(0, True)
+                    AP = mAP.compute_ap(precisions, recalls)
+                    print("Evaluate AP: {:.3f}".format(AP))
+                    summary_scalar(self.writer, iter, tags=["AP"], values=[AP])
+
+                else:
+                    raise NotImplementedError
 
             # Snapshotting
             if iter % cfg.TRAIN.SNAPSHOT_ITERS == 0:

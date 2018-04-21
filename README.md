@@ -93,4 +93,4 @@
   ```
 
 #### 2018-4-19
-* set weight decay = 1e-4, replace nms function with tf.image.non_max_supression
+* set weight decay = 1e-4

@@ -49,7 +49,7 @@ class Network(object):
         self._gt_image = tf.reverse(resized, axis=[-1])
 
     def _add_medical_gt_image(self):
-        self._gt_image = self._image if cfg.USE_WIDTH_LEVEL else (self._image + 1.) * 255 / 2.
+        self._gt_image = self._image * 255 if cfg.USE_WIDTH_LEVEL else (self._image + 1.) * 255 / 2.
 
     def _add_gt_image_summary(self):
         """ use a customized visualization function to visualize the boxes """
@@ -340,8 +340,8 @@ class Network(object):
         pos_p_sub = array_ops.where(merged_target > zeros, merged_target - sigmoid_p, zeros)
 
         neg_p_sub = array_ops.where(merged_target > zeros, zeros, sigmoid_p)
-        per_entry_cross_ent = -alpha * (pos_p_sub ** gamma) * tf.log(tf.clip_by_value(sigmoid_p, 1e-8, 1.0)) \
-                        -(1 - alpha) * (neg_p_sub ** gamma) * tf.log(tf.clip_by_value(1.0 - sigmoid_p, 1e-8, 1.0))
+        per_entry_cross_ent = (pos_p_sub ** gamma) * tf.nn.softplus(-prediction_tensor) + \
+                        (neg_p_sub ** gamma) * (prediction_tensor + tf.nn.softplus(-prediction_tensor))
         
         return tf.reduce_sum(per_entry_cross_ent, axis=1)
 
