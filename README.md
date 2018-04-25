@@ -105,7 +105,14 @@
   mean IoU: **0.779**  
   AP: 0.899 (>=0.5)  
   Note: when using batch norm, batch mean and variance is used in both train and test modes. Moving mean and variance will harm test accurancy seriously.
-* instance norm (inst_norm)  
-  mean IoU:**0.779**  
+* instance norm (inst_norm) (keep)  
+  mean IoU: **0.779**  
   AP: 0.895 (>=0.5)  
 
+#### 2018-4-25
+* area_low >= 2000 stepsize=140000
+  mean IoU: **0.794**
+  AP: 0.900 (>=0.5)
+
+#### 2018-4-26
+* Use resnet-101, stepsize=120000
