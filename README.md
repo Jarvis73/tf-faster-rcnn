@@ -92,5 +92,20 @@
   bash experiments/scripts/test_faster_rcnn.sh 7 liver_ql vgg16 3 0. 0.6
   ```
 
-#### 2018-4-19
-* set weight decay = 1e-4
+#### 2018-4-21
+* Use expanded dataset, cls_weight=1, bbox_weight=1, step size = [160000], max_iter = 225000 (keep)  
+  mean IoU: **0.737**  
+  AP: 0.844 (>=0.5)  
+* Use resnet-50 (origin)  
+  mean IoU: **0.756**  
+  AP: 0.868 (>=0.5)  
+
+#### 2018-4-24
+* Use resnet-50, stepsize=100000, max_iter=200000 (batch_norm)  
+  mean IoU: **0.779**  
+  AP: 0.899 (>=0.5)  
+  Note: when using batch norm, batch mean and variance is used in both train and test modes. Moving mean and variance will harm test accurancy seriously.
+* instance norm (inst_norm)  
+  mean IoU:**0.779**  
+  AP: 0.895 (>=0.5)  
+

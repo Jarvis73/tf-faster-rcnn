@@ -39,10 +39,10 @@ def resnet_arg_scope(is_training=True,
         weights_initializer=slim.variance_scaling_initializer(),
         trainable=is_training,
         activation_fn=tf.nn.leaky_relu,
-        normalizer_fn=slim.batch_norm,
-            normalizer_params=batch_norm_params):
-        with arg_scope([slim.batch_norm], **batch_norm_params) as arg_sc:
-            return arg_sc
+        normalizer_fn=slim.instance_norm) as arg_sc:
+        #    normalizer_params=batch_norm_params) as arg_sc:
+        #with arg_scope([slim.batch_norm], **batch_norm_params) as arg_sc:
+        return arg_sc
 
 
 class resnetv1(Network):
@@ -162,10 +162,6 @@ class resnetv1(Network):
         variables_to_restore = []
 
         for v in variables:
-            # exclude the first conv layer to swap RGB to BGR
-            if v.name == (self._scope + '/conv1/weights:0'):
-                self._variables_to_fix[v.name] = v
-                continue
             if v.name.split(':')[0] in var_keep_dic:
                 print('Variables restored: %s' % v.name)
                 variables_to_restore.append(v)

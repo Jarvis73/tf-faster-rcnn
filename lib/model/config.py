@@ -46,10 +46,10 @@ __C.ONLY_INSIDE_ABDOMEN = True
 __C.USE_PRETRAINED_MODEL = False
 
 # weight for bbox reg loss
-__C.BBOX_WEIGHT = 10.
+__C.BBOX_WEIGHT = 1.
 
 # weight for cls loss
-__C.CLS_WEIGHT = 20.
+__C.CLS_WEIGHT = 1.
 
 # group normalization, group number
 __C.GROUP = 32
@@ -70,6 +70,8 @@ __C.VAL_ITERS = 3000
 
 # validation numbers
 __C.VAL_NUM = 500
+
+__C.FINE_TUNE = False
 
 # ----------------------------------------------------------------------------------------
 # Training options
@@ -115,9 +117,6 @@ __C.TRAIN.BIAS_DECAY = False
 # Iteration intervals for showing the loss during training, on command line interface
 __C.TRAIN.DISPLAY = 50
 
-# Whether to double the learning rate for bias
-__C.TRAIN.DOUBLE_BIAS = True
-
 # Fraction of minibatch that is labeled foreground (i.e. class > 0)
 __C.TRAIN.FG_FRACTION = 0.25
 
@@ -140,7 +139,7 @@ __C.TRAIN.LEARNING_RATE = 0.001
 __C.TRAIN.MAX_SIZE = 512 #1000
 
 # Momentum
-__C.TRAIN.MOMENTUM = 0.9
+__C.TRAIN.MOMENTUM = 0.99
 
 # Train using these proposals
 __C.TRAIN.PROPOSAL_METHOD = 'gt'

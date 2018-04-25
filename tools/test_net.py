@@ -41,12 +41,12 @@ def parse_args():
     parser.add_argument('--num_dets', dest='max_per_image',
                         help='max number of detections per image',
                         default=100, type=int)
-    parser.add_argument('--thresh', dest='threshold_pre_nms',
+    parser.add_argument('--thresh_nms', dest='threshold_nms',
                         help='threshold of detections',
-                        default='0.', type=float)
-    parser.add_argument('--thresh2', dest='threshold_post_nms',
-                        help='threshold of detections',
-                        default='0.', type=float)
+                        default='0.5', type=float)
+    parser.add_argument('--thresh_map', dest='threshold_map',
+                        help='threshold for compute mAP',
+                        default='0.5', type=float)
     parser.add_argument('--tag', dest='tag',
                         help='tag of the model',
                         default='', type=str)
@@ -90,8 +90,7 @@ if __name__ == '__main__':
     tag = tag if tag else 'default'
     filename = tag + '/' + filename
 
-    imdb = get_imdb(args.imdb_name)
-    imdb.competition_mode(args.comp_mode)
+    imdbs = [get_imdb(s) for s in args.imdb_name.split("+")]
 
     tfconfig = tf.ConfigProto(allow_soft_placement=True)
     tfconfig.gpu_options.allow_growth = True
@@ -113,7 +112,7 @@ if __name__ == '__main__':
         raise NotImplementedError
 
     # load model
-    net.create_architecture("TEST", imdb.num_classes, tag='default',
+    net.create_architecture("TEST", imdbs[0].num_classes, tag='default',
                             anchor_scales=cfg.ANCHOR_SCALES,
                             anchor_ratios=cfg.ANCHOR_RATIOS)
 
@@ -127,7 +126,7 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         print('Loaded.')
 
-    test_net(sess, net, imdb, filename, max_per_image=args.max_per_image, 
-            thresh_pre_nms=args.threshold_pre_nms, thresh_post_nms=args.threshold_post_nms)
+    test_net(sess, net, imdbs, filename, max_per_image=args.max_per_image, 
+            thresh_nms=args.threshold_nms, thresh_map=args.threshold_map)
 
     sess.close()

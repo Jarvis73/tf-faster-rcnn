@@ -25,6 +25,7 @@ import glob
 import time
 
 import tensorflow as tf
+import tensorflow.contrib.slim as slim
 from tensorflow.python import pywrap_tensorflow
 
 
@@ -135,24 +136,10 @@ class SolverWrapper(object):
 
             # Compute the gradients with regard to the loss
             gvs = self.optimizer.compute_gradients(loss)
-            # Double the gradient of the bias if set
-            if cfg.TRAIN.DOUBLE_BIAS:
-                final_gvs = []
-                with tf.variable_scope('Gradient_Mult') as scope:
-                    for grad, var in gvs:
-                        scale = 1.
-                        if cfg.TRAIN.DOUBLE_BIAS and '/biases:' in var.name:
-                            scale *= 2.
-                        if not np.allclose(scale, 1.0):
-                            grad = tf.multiply(grad, scale)
-                        final_gvs.append((grad, var))
-                update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-                with tf.control_dependencies(update_ops):
-                    train_op = self.optimizer.apply_gradients(final_gvs)
-            else:
-                update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-                with tf.control_dependencies(update_ops):
-                    train_op = self.optimizer.apply_gradients(gvs)
+            #train_op = slim.learning.create_train_op(loss, self.optimizer)
+            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            with tf.control_dependencies(update_ops):
+                train_op = self.optimizer.apply_gradients(gvs)
             
             # We will handle the snapshots ourselves
             self.saver = tf.train.Saver(max_to_keep=100000)
@@ -329,7 +316,7 @@ class SolverWrapper(object):
                 print('speed: {:.3f}s / iter'.format(timer.average_time))
 
             # Validation full dataset
-            if iter == 1 or iter % cfg.VAL_ITERS == 0:
+            if iter % cfg.VAL_ITERS == 0:
                 if cfg.ONLY_RPN:
                     mAP = DetectionMAP(self.imdb.num_classes - 1)
                     for i in range(cfg.VAL_NUM):

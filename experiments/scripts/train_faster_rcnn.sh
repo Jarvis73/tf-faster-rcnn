@@ -41,9 +41,9 @@ case ${DATASET} in
     RATIOS="[0.5,1,2]"
     ;;
   liver_ql)
-    TRAIN_IMDB="liverQL_2016_train+liverQL_2017_train"
-    TEST_IMDB="liverQL_2017_test"
-    STEPSIZE="[300000]"
+    TRAIN_IMDB="liverQL_2016_train+liverQL_2017_train+liverQL_2018_train"
+    TEST_IMDB="liverQL_2018_val"
+    STEPSIZE="[160000,300000]"
     ITERS=350000
     ANCHORS="[4,8,12,16,24]"
     RATIOS="[0.5,0.7,1,1.5,2]"

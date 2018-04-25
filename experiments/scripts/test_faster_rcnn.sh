@@ -9,8 +9,8 @@ GPU_ID=$1
 DATASET=$2
 NET=$3
 NUM_DETS=$4
-THRESH_PRE_NMS=$5
-THRESH_POST_NMS=$6
+THRESH_NMS=$5
+THRESH_MAP=$6
 
 array=( $@ )
 len=${#array[@]}
@@ -40,8 +40,8 @@ case ${DATASET} in
     RATIOS="[0.5,1,2]"
     ;;
   liver_ql)
-    TRAIN_IMDB="liverQL_2016_train+liverQL_2017_train"
-    TEST_IMDB="liverQL_2017_train"
+    TRAIN_IMDB="liverQL_2016_train+liverQL_2017_train+liverQL_2018_train"
+    TEST_IMDB="liverQL_2017_test+liverQL_2018_test"
     ITERS=350000
     ANCHORS="[4,8,12,16,24]"
     RATIOS="[0.5,0.7,1,1.5,2]"
@@ -70,8 +70,8 @@ if [[ ! -z  ${EXTRA_ARGS_SLUG}  ]]; then
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
     --num_dets ${NUM_DETS} \
-    --thresh ${THRESH_PRE_NMS} \
-    --thresh2 ${THRESH_POST_NMS} \
+    --thresh_nms ${THRESH_NMS} \
+    --thresh_map ${THRESH_MAP} \
     --tag ${EXTRA_ARGS_SLUG} \
     --net ${NET} \
     --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
@@ -82,8 +82,8 @@ else
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
     --num_dets ${NUM_DETS} \
-    --thresh ${THRESH_PRE_NMS} \
-    --thresh2 ${THRESH_POST_NMS} \
+    --thresh_nms ${THRESH_NMS} \
+    --thresh_map ${THRESH_MAP} \
     --net ${NET} \
     --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
           ${EXTRA_ARGS}
