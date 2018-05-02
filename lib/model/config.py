@@ -71,7 +71,11 @@ __C.VAL_ITERS = 3000
 # validation numbers
 __C.VAL_NUM = 500
 
-__C.FINE_TUNE = False
+# fine-tune
+__C.FINE_TUNE = False 
+
+# three slices for three channels
+__C.THREE_SLICES = False
 
 # ----------------------------------------------------------------------------------------
 # Training options
@@ -183,7 +187,7 @@ __C.TRAIN.RPN_POST_NMS_TOP_N_ONLY_RPN = 500
 __C.TRAIN.SCALES = (512,) #(600,)
 
 # Iterations between snapshots
-__C.TRAIN.SNAPSHOT_ITERS = 5000
+__C.TRAIN.SNAPSHOT_ITERS = 50000000
 
 # The number of snapshots kept, older ones are deleted to save space
 __C.TRAIN.SNAPSHOT_KEPT = 3
@@ -214,7 +218,7 @@ __C.TRAIN.USE_ALL_GT = True
 __C.TRAIN.USE_GT = False
 
 # Weight decay, for regularization
-__C.TRAIN.WEIGHT_DECAY = 0.0001
+__C.TRAIN.WEIGHT_DECAY = 0.00001
 
 # Make minibatches from images that have similar aspect ratios (i.e. both
 # tall and thin or both short and wide) in order to avoid wasting computation

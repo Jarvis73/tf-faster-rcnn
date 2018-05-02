@@ -10,12 +10,15 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os.path as osp
 import numpy as np
 import numpy.random as npr
 import cv2
+import sys
+sys.path.insert(0, osp.join(osp.dirname(__file__), ".."))
 from model.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
-from datasets.Liver_Kits import METType, abdominal_mask
+from datasets.Liver_Kits import METType, abdominal_mask, raw_reader
 
 def get_minibatch(roidb, num_classes):
     """Given a roidb, construct a minibatch sampled from it."""
@@ -85,27 +88,65 @@ def _get_medical_image_blob(roidb):
     """
     num_images = len(roidb)
     processed_ims = []
+    pre_ims = []
+    post_ims = []
     abdo_masks = []
     for i in range(num_images):
-        with open(roidb[i]['image'], 'rb') as fid:
-            raw_data = fid.read()
-        im = np.frombuffer(raw_data, dtype=METType[cfg.MET_TYPE])
-        im = np.reshape(im, (roidb[i]['height'], roidb[i]['width']))
+        im = raw_reader(roidb[i]["image"], cfg.MET_TYPE, [roidb[i]["height"], roidb[i]["width"]])
         if roidb[i]['flipped']:
             im = im[:, ::-1]
         processed_ims.append(im)
 
         mask = abdominal_mask(im.copy())
         abdo_masks.append(mask)
-    
+        
+        if cfg.THREE_SLICES:
+            # get pre-image
+            basename = osp.basename(roidb[i]["image"])
+            names = basename[:-4].split("_")
+            slice_num = int(names[-1])
+            if slice_num == 0:
+                pre_im = im
+            else:
+                slice_num -= 1
+                names[-1] = str(slice_num)
+                basename = "_".join(names) + ".raw"
+                pre_path = osp.join(osp.dirname(roidb[i]["image"]), basename)
+                pre_im = raw_reader(pre_path, cfg.MET_TYPE, [roidb[i]["height"], roidb[i]["width"]])
+                if roidb[i]['flipped']:
+                    pre_im = pre_im[:, ::-1]
+            pre_ims.append(pre_im)
+
+            # get post-image
+            basename = osp.basename(roidb[i]["image"])
+            names = basename[:-4].split("_")
+            names[-1] = str(int(names[-1]) + 1)
+            basename = "_".join(names) + ".raw"
+            post_path = osp.join(osp.dirname(roidb[i]["image"]), basename)
+            try:
+                post_im = raw_reader(post_path, cfg.MET_TYPE, [roidb[i]["height"], roidb[i]["width"]])
+                if roidb[i]['flipped']:
+                    post_im = post_im[:, ::-1]
+            except FileNotFoundError:
+                post_im = im
+            post_ims.append(post_im)
+
     num_images = len(processed_ims)
     blob = np.zeros((num_images, cfg.TRAIN.MAX_SIZE, cfg.TRAIN.MAX_SIZE, 3), dtype=np.float32)
     abdo_mask = np.zeros((num_images, cfg.TRAIN.MAX_SIZE, cfg.TRAIN.MAX_SIZE), dtype=np.bool)
-    for i in range(num_images):
-        blob[i,:,:,0] = processed_ims[i]
-        blob[i,:,:,1] = processed_ims[i]
-        blob[i,:,:,2] = processed_ims[i]
-        abdo_mask[i,:,:] = abdo_masks[i]
+    if cfg.THREE_SLICES:
+        for i in range(num_images):
+            blob[i,:,:,0] = pre_ims[i]
+            blob[i,:,:,1] = processed_ims[i]
+            blob[i,:,:,2] = post_ims[i]
+            abdo_mask[i,:,:] = abdo_masks[i]
+    else:
+        for i in range(num_images):
+            blob[i,:,:,0] = processed_ims[i]
+            blob[i,:,:,1] = processed_ims[i]
+            blob[i,:,:,2] = processed_ims[i]
+            abdo_mask[i,:,:] = abdo_masks[i]
+
     if cfg.USE_WIDTH_LEVEL:
         win, wind2, lev = cfg.WIDTH, cfg.WIDTH / 2, cfg.LEVEL
         blob = (np.clip(blob, lev - wind2, lev + wind2) - (lev - wind2)) / 2**16 * win
@@ -114,3 +155,10 @@ def _get_medical_image_blob(roidb):
         blob = np.clip(blob, -1., 1.)
 
     return blob, abdo_mask
+
+if __name__ == "__main__":
+    roidb = [{"image": "C:/DataSet/LiverQL/liver_2017_train/liver/Q001_o_57.raw",
+              "height": 512,
+              "width": 512,
+              "flipped": False}]
+    blob, abdo_mask = _get_medical_image_blob(roidb)

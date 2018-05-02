@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 from skimage.segmentation import clear_border
 from skimage.measure import label, regionprops
+from skimage.feature import canny
 from scipy.ndimage import binary_fill_holes
 import matplotlib.pyplot as plt
 
@@ -66,6 +67,15 @@ def mhd_reader(mhdpath, only_meta=False):
         raw_image = np.reshape(raw_image, meta_info['DimSize'])
 
     return meta_info, raw_image 
+
+def raw_reader(raw_path, element_type="MET_SHORT", dim_size=[512, 512]):
+    with open(raw_path, "rb") as fraw:
+        buffer = fraw.read()
+    
+    raw_image = np.frombuffer(buffer, dtype=METType[element_type])
+    raw_image = np.reshape(raw_image, dim_size)
+
+    return raw_image
 
 def bbox_from_mask_2D(mask, bk_value=None):
     """ Calculate bounding box from a 2D mask image 
@@ -145,6 +155,7 @@ def get_mhd_list_with_liver(SrcDir, threshold=0, verbose=False):
         print("mhd list loaded from {}".format(cache_file))
         return keep_mhd_list
     
+
     all_mhd_list, all_mhd_length = get_mhd_list(SrcDir)
     keep_mhd_list = []
     for mhdfile in all_mhd_list:
@@ -161,6 +172,10 @@ def get_mhd_list_with_liver(SrcDir, threshold=0, verbose=False):
     print("Write mhd list to {}".format(cache_file))
 
     return keep_mhd_list
+
+def get_canny(image, sigma=3, **kwargs):
+    result = canny(image, sigma=sigma, **kwargs)
+    return result
 
 if __name__ == '__main__':
     SrcDir = "C:/DataSet/LiverQL/Liver-Ref/"
@@ -197,7 +212,6 @@ if __name__ == '__main__':
         plt.hist(areas, 25)
         plt.show()
 
-
     if False:
         SrcDir_m1 = "D:/DataSet/LiverQL/Liver_2016_train/mask/"
         SrcDir_m2 = "D:/DataSet/LiverQL/Liver_2017_train/mask/"
@@ -222,11 +236,19 @@ if __name__ == '__main__':
         print(labels.dtype)
         print(np.max(labels), np.min(labels))
 
-    if True:
+    if False:
         # check abdomen window (width and level)
         path = "D:/DataSet/LiverQL/Liver_2018_train/liver/R001_o_26.mhd"
         _, image = mhd_reader(path)
         image = (np.clip(image, 55 - 125, 55 + 125) - (55 - 125)) / 2**16 * 250
         plt.hist(image.flat, 20)
         #plt.imshow(image, cmap="gray")
+        plt.show()
+
+    if True:
+        path = "C:/DataSet/LiverQL/Liver_2017_train/liver/Q001_o_44.mhd"
+        _, image = mhd_reader(path)
+        image = (np.clip(image, 55 - 125, 55 + 125) - (55 - 125)) / 2**16 * 250
+        image_edge = get_canny(image)
+        plt.imshow(image_edge, cmap="gray")
         plt.show()

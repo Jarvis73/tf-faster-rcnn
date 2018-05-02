@@ -229,7 +229,7 @@ def draw_threshold_iou_curve(filename, a=0, b=1, step=0.01):
 
 
 if __name__ == '__main__':
-    results_path = "D:/DataSet/LiverQL/Liver_2017_test/results_cls_liver.txt"
+    results_path = "C:/DataSet/LiverQL/Liver_2017_test/results_cls_liver.txt"
     #results_path = "D:/DataSet/LiverQL/Liver_2016_train/results_cls_liver.txt"
     if True:
         import sys
@@ -246,8 +246,8 @@ if __name__ == '__main__':
                     probs.append(prob)
                     tpath, prob, bbox = get_line(f)
                 print(path)
-                _, image = mhd_reader(path.replace("/home/jarvis", "D:").replace("mask", "liver").replace("_m_", "_o_"))
-                _, mask = mhd_reader(path.replace("/home/jarvis", "D:"))
+                _, image = mhd_reader(path.replace("/home/jarvis", "C:").replace("mask", "liver").replace("_m_", "_o_"))
+                _, mask = mhd_reader(path.replace("/home/jarvis", "C:"))
                 gt_boxes = bbox_from_mask_2D(mask)
                 gt_boxes.append(1)
                 gt_boxes = np.array(gt_boxes).reshape((-1, 5))
