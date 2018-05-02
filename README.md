@@ -110,39 +110,39 @@
   AP: 0.895 (>=0.5)  
 
 #### 2018-4-25
-* area_low >= 2000 stepsize=140000
-  mean IoU: **0.794**
-  AP: 0.900 (>=0.5)
+* area_low >= 2000 stepsize=140000  
+  mean IoU: **0.794**  
+  AP: 0.900 (>=0.5)  
 
 #### 2018-4-26
 * Use resnet-101, stepsize=120000(Remove)
 
 #### 2018-4-29
-* Use resnet-50, layer norm, stepsize=100000
-  mean IoU: **0.696**
-  AP: 0.784 (>=0.5)
-* Use resnet-50, batch norm, relu
-  mean IoU: **0.757**
-  AP: 0.876
-* Use resnet-50, instance norm, relu
-  mean IoU: **0.763**
-  AP: 0.881
+* Use resnet-50, layer norm, stepsize=100000  
+  mean IoU: **0.696**  
+  AP: 0.784 (>=0.5)  
+* Use resnet-50, batch norm, relu  
+  mean IoU: **0.757**  
+  AP: 0.876  
+* Use resnet-50, instance norm, relu  
+  mean IoU: **0.763**  
+  AP: 0.881  
 
 #### 2018-4-30
-* Use resnet-50, batch norm, leaky_relu
-  mean IoU: **0.755**
-  AP: 0.852
-* Use resnet-50, insta norm, leaky_relu
-  mean IoU: **0.755**
-  AP: 0.872
+* Use resnet-50, batch norm, leaky_relu  
+  mean IoU: **0.755**  
+  AP: 0.852  
+* Use resnet-50, insta norm, leaky_relu  
+  mean IoU: **0.755**  
+  AP: 0.872  
 
 #### 2018-5-2
-* Use resnet-50, insta norm, relu, three slices as input
-  mean IoU: **0.727**
-  AP: 0.754
-* Use resnet-50, insta norm, relu, batch size = 200
-  mean IoU: **?**
-  AP: ?
+* Use resnet-50, insta norm, relu, three slices as input  
+  mean IoU: **0.727**  
+  AP: 0.754  
+* Use resnet-50, insta norm, relu, batch size = 200  
+  mean IoU: **?**  
+  AP: ?  
 
 #### 2018-5-01
 Some problems:
