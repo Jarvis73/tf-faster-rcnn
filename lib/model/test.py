@@ -236,7 +236,7 @@ def test_net(sess, net,
             print('im_detect: {:d}/{:d} {:.3f}s {:.3f}s\r'.format(accu + i + 1, 
                     num_images, _t['im_detect'].average_time, _t['misc'].average_time), end="")
         imdb_all_boxes = [[all_boxes[j][accu + i] for i in range(imdb.num_images)] for j in range(imdb.num_classes)]
-        imdb.evaluate_detections(imdb_all_boxes, output_dir)
+        imdb.evaluate_detections(imdb_all_boxes, output_dir, n)
         accu += imdb.num_images
 
     # compute mAP

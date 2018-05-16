@@ -245,10 +245,10 @@ if __name__ == '__main__':
         #plt.imshow(image, cmap="gray")
         plt.show()
 
-    if True:
-        path = "C:/DataSet/LiverQL/Liver_2017_train/liver/Q001_o_44.mhd"
+    if False:
+        path = "C:/DataSet/LiverQL/Liver_2017_train/liver/Q001_o_57.mhd"
         _, image = mhd_reader(path)
-        image = (np.clip(image, 55 - 125, 55 + 125) - (55 - 125)) / 2**16 * 250
-        image_edge = get_canny(image)
-        plt.imshow(image_edge, cmap="gray")
+        image = (np.clip(image, -300 - 700, -300 + 700) - (-300 - 700)) / 2**16 * 1400
+        #image = image.astype(np.int32)
+        plt.imshow(image, cmap="gray")
         plt.show()

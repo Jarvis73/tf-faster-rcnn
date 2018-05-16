@@ -86,7 +86,7 @@
 
 #### 2018-4-18
 * set width = 250, level = 55, anchors[4,8,12,16,24], ratios[0.5,0.7,1,1.5,2], cls_weight=50, bbox_weight=50 (training - output)
-  I have found a bug in my test routine, that I have used mask image to generate abdomen mask :( f**k.  
+  I have found a bug in my test routine, that I have used mask image to generate abdomen mask :(  
   I got a mean IoU of **0.741** with test instruction:
   ```bash
   bash experiments/scripts/test_faster_rcnn.sh 7 liver_ql vgg16 3 0. 0.6
@@ -122,31 +122,54 @@
   mean IoU: **0.696**  
   AP: 0.784 (>=0.5)  
 * Use resnet-50, batch norm, relu  
-  mean IoU: **0.757**  
+  mean IoU: #**0.782**  
   AP: 0.876  
 * Use resnet-50, instance norm, relu  
-  mean IoU: **0.763**  
+  mean IoU: #**0.782**  
   AP: 0.881  
 
 #### 2018-4-30
 * Use resnet-50, batch norm, leaky_relu  
-  mean IoU: **0.755**  
+  mean IoU: #**0.777**  
   AP: 0.852  
 * Use resnet-50, insta norm, leaky_relu  
-  mean IoU: **0.755**  
+  mean IoU: #**0.779**  
   AP: 0.872  
 
 #### 2018-5-2
 * Use resnet-50, insta norm, relu, three slices as input  
   mean IoU: **0.727**  
   AP: 0.754  
-* Use resnet-50, insta norm, relu, batch size = 200  
-  mean IoU: **?**  
-  AP: ?  
+* Use resnet-50, insta norm, relu, batch size = 200(keep)  
+  mean IoU: **0.747**  
+  AP: 0.887  
+  max_iters = 300000(keep)  
+  mean IoU: **0.737**  
+  AP: 0.895  
+
+#### 2018-5-3
+* momentum=0.9  
+  mean IoU: **0.714**  
+  AP: 0.803  
+
+#### 2018-5-7
+* AdamOptimizer, stepsize=150000  
+  mean IoU: #**0.781**  
+  AP: 0.882  
+* stepsize=[150000,250000], max_iters=350000(keep)  
+  mean IoU: #**0.792**  
+  AP: 0.906  
+* batch norm
+  mean IoU: #**0.774**
+  AP: 0.880
+
 
 #### 2018-5-01
 Some problems:
 * Case P021, false positive
 * Case P024, slice 10/38 wrong label
-* Case P002, slice 31/22 different window width/level will give show different edge
+* Case P002, slice 31/33 different window width/level will give show different edge
 * Case P020, slice 43/49 mistake cardiac for liver
+
+#### 2018-5-8
+* Case R077

@@ -107,12 +107,12 @@ class liverQL(imdb):
                 'flipped': False,
                 'seg_areas': seg_areas}
 
-    def _write_liverQL_results_file(self, all_boxes):
+    def _write_liverQL_results_file(self, all_boxes, postfix):
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
             print('Writing {} liverQL results file'.format(cls))
-            filename = osp.join(self._data_path, 'results_cls_{}.txt'.format(cls))
+            filename = osp.join(self._data_path, 'results_cls_{}_{}.txt'.format(cls, postfix))
             with open(filename, 'w') as f:
                 for im_ind, index in enumerate(self.image_index):
                     dets = all_boxes[cls_ind][im_ind]
@@ -121,18 +121,18 @@ class liverQL(imdb):
                     for k in range(dets.shape[0]):
                         f.write('{:s} {:.6f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(index, dets[k, -1], dets[k, 0] + 1, dets[k, 1] + 1, dets[k, 2] + 1, dets[k, 3] + 1))
 
-    def evaluate_detections(self, all_boxes, output_dir):
-        self._write_liverQL_results_file(all_boxes)
+    def evaluate_detections(self, all_boxes, output_dir, postfix):
+        self._write_liverQL_results_file(all_boxes, postfix)
 
         # compute IOU
         total_iou = []
-        iou_file = osp.join(self._data_path, 'iou.txt')
+        iou_file = osp.join(self._data_path, 'iou_{}.txt'.format(postfix))
         f = open(iou_file, 'w')
         for cls_ind in range(1, self.num_classes):
             for im_ind in range(self.num_images):
                 dets = all_boxes[cls_ind][im_ind]
                 if dets.size == 0:
-                    total_iou.append(0.)
+                    #total_iou.append(0.)
                     f.write("0.000 no bbox\n")
                     continue
                 min_ = np.min(dets, axis=0)
@@ -147,7 +147,7 @@ class liverQL(imdb):
                 x2 = np.minimum(pred_bbox[2], gt_bbox[2])
                 y2 = np.minimum(pred_bbox[3], gt_bbox[3])
                 if x1 >= x2 or y1 >= y2:
-                    total_iou.append(0.)
+                    #total_iou.append(0.)
                     f.write("0.000 no overlap\n")
                 else:
                     area1 = (pred_bbox[2] - pred_bbox[0] + 1) * (pred_bbox[3] - pred_bbox[1] + 1)
@@ -158,7 +158,7 @@ class liverQL(imdb):
                     f.write("%.3f\n" % iou)
 
         avg_iou = np.mean(np.array(total_iou))
-        print("Mean iou {:.3f} on {:d} images".format(avg_iou, self.num_images))
+        print("Mean iou {:.3f} on {:d} images".format(avg_iou, len(total_iou)))
         f.close()
 
 

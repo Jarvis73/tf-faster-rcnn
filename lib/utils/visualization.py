@@ -120,12 +120,16 @@ def draw_bounding_boxes_with_prob(image, gt_boxes, prob, im_info):
     return image
 
 def draw_bounding_boxes_with_plt(image, pred_boxes, gt_boxes, probs, path=None, show=True):
-    fig, ax = plt.subplots(1, 1)
+    fig = plt.figure()
+    fig.set_size_inches((3, 3))
+    ax = plt.Axes(fig, [0.,0.,1.,1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
     ax.imshow(image, cmap='gray')
     for i in range(pred_boxes.shape[0]):
         bbox = pred_boxes[i, :]
         rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], 
-                                 linewidth=1, edgecolor='g', facecolor='none')
+                                 linewidth=2, edgecolor='g', facecolor='none')
         ax.add_patch(rect)
         if probs[i]:
             ax.text(bbox[0], bbox[3], "C{:d}-{:.2f}".format(bbox[4], probs[i]), 
@@ -139,14 +143,14 @@ def draw_bounding_boxes_with_plt(image, pred_boxes, gt_boxes, probs, path=None, 
     for i in range(gt_boxes.shape[0]):
         bbox = gt_boxes[i, :]
         rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], 
-                                 linewidth=1, edgecolor='b', facecolor='none')
+                                 linewidth=2, edgecolor='b', facecolor='none')
         ax.add_patch(rect)
 
     plt.axis("off")
     if show:
         plt.show()
     else:
-        plt.savefig(path.replace("mask", "prediction").replace(".mhd", ".png").replace("_m_", "_p_").replace("/home/jarvis", "D:"))
+        plt.savefig(path.replace("mask", "prediction").replace(".mhd", ".png").replace("_m_", "_p_").replace("/home/jarvis", "C:"))
     plt.close()
 
 def get_line(f):
@@ -229,7 +233,7 @@ def draw_threshold_iou_curve(filename, a=0, b=1, step=0.01):
 
 
 if __name__ == '__main__':
-    results_path = "C:/DataSet/LiverQL/Liver_2017_test/results_cls_liver.txt"
+    results_path = "C:/DataSet/LiverQL/Liver_2017_test/results_cls_liver_0.txt"
     #results_path = "D:/DataSet/LiverQL/Liver_2016_train/results_cls_liver.txt"
     if True:
         import sys
@@ -247,6 +251,7 @@ if __name__ == '__main__':
                     tpath, prob, bbox = get_line(f)
                 print(path)
                 _, image = mhd_reader(path.replace("/home/jarvis", "C:").replace("mask", "liver").replace("_m_", "_o_"))
+                image = (np.clip(image, -80, 170) + 80) / 250.0 * 255
                 _, mask = mhd_reader(path.replace("/home/jarvis", "C:"))
                 gt_boxes = bbox_from_mask_2D(mask)
                 gt_boxes.append(1)
@@ -254,6 +259,8 @@ if __name__ == '__main__':
                 pred_boxes = np.array(boxes).reshape((-1, 5))
                 draw_bounding_boxes_with_plt(image, pred_boxes, gt_boxes, probs, path, show=True)
                 path = tpath
+                if not path:
+                    break
         
     if False:
         draw_threshold_iou_curve(results_path)

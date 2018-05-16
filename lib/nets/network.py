@@ -341,7 +341,7 @@ class Network(object):
 
         neg_p_sub = array_ops.where(merged_target > zeros, zeros, sigmoid_p)
         per_entry_cross_ent = (pos_p_sub ** gamma) * tf.nn.softplus(-prediction_tensor) + \
-                        (neg_p_sub ** gamma) * (prediction_tensor + tf.nn.softplus(-prediction_tensor))
+                        (neg_p_sub ** gamma) * tf.nn.softplus(prediction_tensor)
         
         return tf.reduce_sum(per_entry_cross_ent, axis=1)
 

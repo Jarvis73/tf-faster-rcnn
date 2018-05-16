@@ -86,6 +86,36 @@ class SolverWrapper(object):
 
         return filename, nfilename
 
+    def snapshot_best(self, sess, iter):
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+
+        # Store the model snapshot
+        filename = cfg.TRAIN.SNAPSHOT_PREFIX + '_best.ckpt'
+        filename = os.path.join(self.output_dir, filename)
+        self.saver.save(sess, filename)
+
+        # Also store some meta information, random state, etc.
+        nfilename = cfg.TRAIN.SNAPSHOT_PREFIX + '_best.pkl'
+        nfilename = os.path.join(self.output_dir, nfilename)
+        st0 = np.random.get_state()
+        cur = self.data_layer._cur
+        perm = self.data_layer._perm
+        cur_val = self.data_layer_val._cur
+        perm_val = self.data_layer_val._perm
+
+        # Dump the meta info
+        with open(nfilename, 'wb') as fid:
+            pickle.dump(st0, fid, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(cur, fid, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(perm, fid, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(cur_val, fid, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(perm_val, fid, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(iter, fid, pickle.HIGHEST_PROTOCOL)
+
+        print('Wrote best snapshot to: {:s}'.format(filename))
+
+
     def from_snapshot(self, sess, sfile, nfile):
         print('Restoring model snapshots from {:s}'.format(sfile))
         self.saver.restore(sess, sfile)
@@ -132,7 +162,8 @@ class SolverWrapper(object):
             loss = layers['total_loss']
             # Set learning rate and momentum
             lr = tf.Variable(cfg.TRAIN.LEARNING_RATE, trainable=False)
-            self.optimizer = tf.train.MomentumOptimizer(lr, cfg.TRAIN.MOMENTUM)
+            #self.optimizer = tf.train.MomentumOptimizer(lr, cfg.TRAIN.MOMENTUM)
+            self.optimizer = tf.train.AdamOptimizer(lr)
 
             # Compute the gradients with regard to the loss
             gvs = self.optimizer.compute_gradients(loss)
@@ -273,6 +304,7 @@ class SolverWrapper(object):
         stepsizes.append(max_iters)
         stepsizes.reverse()
         next_stepsize = stepsizes.pop()
+        max_AP = 0.0
         while iter < max_iters + 1:
             # Learning rate
             if iter == next_stepsize + 1:
@@ -316,7 +348,7 @@ class SolverWrapper(object):
                 print('speed: {:.3f}s / iter'.format(timer.average_time))
 
             # Validation full dataset
-            if iter % cfg.VAL_ITERS == 0:
+            if iter == 1 or iter % cfg.VAL_ITERS == 0:
                 if cfg.ONLY_RPN:
                     mAP = DetectionMAP(self.imdb.num_classes - 1)
                     for i in range(cfg.VAL_NUM):
@@ -349,7 +381,9 @@ class SolverWrapper(object):
                     AP = mAP.compute_ap(precisions, recalls)
                     print("Evaluate AP: {:.3f}".format(AP))
                     summary_scalar(self.writer, iter, tags=["AP"], values=[AP])
-
+                    if AP > max_AP:
+                        max_AP = AP
+                        self.snapshot_best(sess, iter)
                 else:
                     raise NotImplementedError
 
